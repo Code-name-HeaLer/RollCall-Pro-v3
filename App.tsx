@@ -1,12 +1,17 @@
-import "./global.css"
-import { Text, View } from "react-native";
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import TabNavigator from './src/navigation/TabNavigator';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import './global.css'; // NativeWind requirement
 
 export default function App() {
   return (
-    <View className="flex-1 items-center justify-center bg-green-500">
-      <Text className="text-xl font-bold text-blue-500">
-        Welcome to Nativewind!
-      </Text>
-    </View>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <StatusBar style="auto" />
+        <TabNavigator />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
