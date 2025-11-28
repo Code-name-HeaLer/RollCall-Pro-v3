@@ -3,14 +3,17 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Plus, CheckCircle2, Circle } from 'lucide-react-native';
 
-export default function TasksScreen() {
+export default function TasksScreen({ navigation }: any) {
     const [tab, setTab] = useState<'active' | 'done'>('active');
 
     return (
         <ScreenWrapper>
             <View className="flex-row justify-between items-center mb-6 mt-2">
                 <Text className="text-3xl font-bold text-zinc-900 dark:text-white">Tasks</Text>
-                <TouchableOpacity className="w-10 h-10 bg-indigo-600 rounded-full items-center justify-center shadow-lg shadow-indigo-500/30">
+                <TouchableOpacity
+                    className="w-10 h-10 bg-indigo-600 rounded-full items-center justify-center shadow-lg shadow-indigo-500/30"
+                    onPress={() => navigation.navigate('AddTask' as never)}
+                >
                     <Plus size={24} color="white" />
                 </TouchableOpacity>
             </View>
@@ -53,7 +56,7 @@ export default function TasksScreen() {
 const TaskItem = ({ title, subject, due, isUrgent, isDone }: any) => (
     <View className="flex-row items-center bg-white dark:bg-zinc-900 p-4 rounded-2xl mb-3 border border-zinc-100 dark:border-zinc-800">
         <TouchableOpacity className="mr-4">
-            {isDone ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Circle size={24} className="text-zinc-300" />}
+            {isDone ? <CheckCircle2 size={24} color="#6366F1" /> : <Circle size={24} color="#D4D4D8" />}
         </TouchableOpacity>
         <View className="flex-1">
             <Text className={`text-base font-bold ${isDone ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-white'}`}>{title}</Text>

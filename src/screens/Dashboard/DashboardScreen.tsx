@@ -2,9 +2,27 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Bell, Check, X, Ban, Umbrella, MoreHorizontal } from 'lucide-react-native';
+import { useState, useEffect } from 'react'; // Add hooks
+import { useIsFocused } from '@react-navigation/native'; // To refresh when tab is active
+import { getUser } from '../../db/db'; // Import helper
+
+
 
 export default function DashboardScreen() {
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+    // State for user name
+    const [userName, setUserName] = useState('Scholar');
+    const isFocused = useIsFocused();
+
+    // Fetch User
+    useEffect(() => {
+        if (isFocused) {
+            getUser().then(user => {
+                if (user && user.name) setUserName(user.name);
+            });
+        }
+    }, [isFocused]);
 
     return (
         <ScreenWrapper>
@@ -13,7 +31,7 @@ export default function DashboardScreen() {
                 {/* --- Header --- */}
                 <View className="flex-row justify-between items-center mb-6 mt-2">
                     <View>
-                        <Text className="text-3xl font-bold text-zinc-900 dark:text-white">Hello, Alex!</Text>
+                        <Text className="text-3xl font-bold text-zinc-900 dark:text-white">Hello, {userName}</Text>
                         <Text className="text-zinc-500 dark:text-zinc-400 font-medium">{currentDate}</Text>
                     </View>
                     <TouchableOpacity className="p-3 bg-white dark:bg-zinc-800 rounded-full shadow-sm border border-zinc-100 dark:border-zinc-700">
