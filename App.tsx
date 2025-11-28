@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'; // <--- 2
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDB } from './src/db/db';
+import { ThemeProvider } from './src/context/ThemeContext';
 import './global.css';
 
 export default function App() {
@@ -36,12 +37,14 @@ export default function App() {
   return (
     // 3. WRAP EVERYTHING IN GESTURE HANDLER ROOT VIEW
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <StatusBar style="auto" />
-          <AppNavigator />
-        </NavigationContainer>
-      </SafeAreaProvider>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StatusBar style="auto" />
+            <AppNavigator />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

@@ -2,8 +2,16 @@ import React from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView } from 'react-native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Moon, Bell, Download, Upload, Info, ChevronRight } from 'lucide-react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function SettingsScreen() {
+    const { theme, isDark, setTheme } = useTheme();
+    const isDarkModeEnabled = theme === 'dark';
+
+    const handleThemeToggle = async (value: boolean) => {
+        await setTheme(value ? 'dark' : 'light');
+    };
+
     return (
         <ScreenWrapper>
             <Text className="text-3xl font-bold text-zinc-900 dark:text-white mb-8 mt-2">Settings</Text>
@@ -16,11 +24,15 @@ export default function SettingsScreen() {
                     <View className="flex-row items-center justify-between p-4">
                         <View className="flex-row items-center gap-3">
                             <View className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/20 rounded-full items-center justify-center">
-                                <Moon size={18} className="text-indigo-600 dark:text-indigo-400" />
+                                <Moon size={18} color={isDark ? "#818CF8" : "#4F46E5"} />
                             </View>
                             <Text className="text-base font-medium text-zinc-900 dark:text-white">Dark Mode</Text>
                         </View>
-                        <Switch trackColor={{ false: '#767577', true: '#4F46E5' }} value={false} />
+                        <Switch 
+                            trackColor={{ false: '#767577', true: '#4F46E5' }} 
+                            value={isDarkModeEnabled}
+                            onValueChange={handleThemeToggle}
+                        />
                     </View>
                 </View>
 

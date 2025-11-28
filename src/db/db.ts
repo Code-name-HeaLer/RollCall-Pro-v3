@@ -78,6 +78,12 @@ export const getUser = async (): Promise<any | null> => {
     return db.getFirstAsync('SELECT * FROM users LIMIT 1', []);
 };
 
+// Helper: Update Theme Preference
+export const updateThemePreference = async (theme: 'light' | 'dark' | 'system'): Promise<void> => {
+    const db = await getDatabase();
+    await db.runAsync('UPDATE users SET theme_pref = ? WHERE id = 1', [theme]);
+};
+
 
 // ... (Your existing initDB, checkUserExists, createUser, getUser code)
 
