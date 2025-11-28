@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, useColorScheme } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Plus, Calendar as CalendarIcon, MoreVertical } from 'lucide-react-native';
@@ -8,6 +8,7 @@ import { getSubjects, Subject } from '../../db/db'; // Import helpers
 export default function SubjectsScreen({ navigation }: any) {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [loading, setLoading] = useState(true);
+    const colorScheme = useColorScheme();
 
     // Load Data when screen comes into focus
     useFocusEffect(
@@ -71,10 +72,15 @@ export default function SubjectsScreen({ navigation }: any) {
                             return (
                                 <TouchableOpacity
                                     onPress={() => navigation.navigate('AddSubject')}
-                                    className="w-[48%] h-48 bg-zinc-100 dark:bg-zinc-900 rounded-3xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 items-center justify-center mb-4"
+                                    className="w-[48%] h-48 bg-zinc-100 dark:bg-zinc-900 rounded-3xl items-center justify-center mb-4"
+                                    style={{
+                                        borderWidth: 2,
+                                        borderStyle: 'dashed',
+                                        borderColor: colorScheme === 'dark' ? '#3F3F46' : '#D4D4D8', // zinc-700 for dark, zinc-300 for light
+                                    }}
                                 >
                                     <View className="w-12 h-12 bg-zinc-200 dark:bg-zinc-800 rounded-full items-center justify-center mb-2">
-                                        <Plus size={24} className="text-zinc-500" />
+                                        <Plus size={24} color="#71717A" />
                                     </View>
                                     <Text className="text-zinc-500 font-medium">Add Subject</Text>
                                 </TouchableOpacity>

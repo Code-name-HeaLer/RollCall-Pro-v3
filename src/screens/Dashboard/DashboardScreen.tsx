@@ -46,7 +46,7 @@ export default function DashboardScreen() {
                         <View className="w-10 h-10 bg-indigo-400/30 rounded-full items-center justify-center mb-3">
                             <Text className="text-white font-bold">All</Text>
                         </View>
-                        <Text className="text-white/80 text-sm font-medium">Overall Attendance</Text>
+                        <Text className="text-white/80 text-xs font-medium" numberOfLines={1}>Overall Attendance</Text>
                         <Text className="text-white text-3xl font-bold mt-1">85%</Text>
                     </View>
 

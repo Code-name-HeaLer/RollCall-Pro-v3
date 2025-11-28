@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { X, Check } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
 import { addSubject } from '../../db/db'; // Import the new helper
 
 const COLORS = ['#F43F5E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
 
 export default function AddSubjectScreen({ navigation: navProp }: any) {
     // Use hook as fallback if prop is not available
-    const navHook = useNavigation();
-    const navigation = navProp || navHook;
+    const navigation = navProp
     const [mode, setMode] = useState<'new' | 'mid'>('new');
     const [selectedColor, setSelectedColor] = useState(COLORS[0]);
 
