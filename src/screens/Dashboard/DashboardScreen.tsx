@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Platform, Pressable } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Bell, Check, X, Ban, Umbrella, Coffee, Clock, Plus, MapPin, BookOpen, Calendar, NotebookText, CalendarRange } from 'lucide-react-native';
@@ -14,6 +15,8 @@ import {
 export default function DashboardScreen() {
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
     const isoDate = new Date().toISOString().split('T')[0];
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
 
     const [userName, setUserName] = useState('Scholar');
     const [todaysClasses, setTodaysClasses] = useState<TimetableItem[]>([]);
@@ -167,14 +170,15 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                 </View>
 
+                {/* Stats */}
                 <View className="gap-4 mb-8">
                     <Pressable
                         className="rounded-2xl p-5"
                         style={{
-                            backgroundColor: '#6366f1',
-                            shadowColor: '#6366f1',
+                            backgroundColor: isDark ? '#4f46e5' : '#6366f1',
+                            shadowColor: isDark ? '#4f46e5' : '#6366f1',
                             shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.15,
+                            shadowOpacity: isDark ? 0.25 : 0.15,
                             shadowRadius: 12,
                             elevation: 4,
                         }}
@@ -211,16 +215,16 @@ export default function DashboardScreen() {
                                 width: "42%",
                                 height: "100%",
                                 marginRight: 8,
-                                backgroundColor: `rgba(255, 240, 31, 0.2)`,
-                                borderColor: `rgba(255, 240, 31, 0.4)`,
+                                backgroundColor: isDark ? 'rgba(161, 98, 7, 0.25)' : 'rgba(255, 240, 31, 0.2)',
+                                borderColor: isDark ? 'rgba(180, 83, 9, 0.4)' : 'rgba(255, 240, 31, 0.4)',
                             }}
                         >
                             <View className="flex-row items-center">
                                 <View className="w-[45px] h-[45px] rounded-xl items-center justify-center mr-3"
                                     style={{
-                                        backgroundColor: `rgba(250, 250, 5, 0.3)`,
+                                        backgroundColor: isDark ? 'rgba(161, 98, 7, 0.35)' : 'rgba(250, 250, 5, 0.3)',
                                     }}>
-                                    <NotebookText size={24} color="#7d7501" />
+                                    <NotebookText size={24} color={isDark ? '#fbbf24' : '#ffe600'} />
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase">Today</Text>
@@ -234,16 +238,16 @@ export default function DashboardScreen() {
                             style={{
                                 flex: 1,
                                 marginLeft: 8,
-                                backgroundColor: `rgba(55, 255, 20, 0.2)`,
-                                borderColor: `rgba(55, 255, 20, 0.4)`,
+                                backgroundColor: isDark ? 'rgba(5, 122, 85, 0.25)' : 'rgba(55, 255, 20, 0.2)',
+                                borderColor: isDark ? 'rgba(5, 150, 105, 0.4)' : 'rgba(55, 255, 20, 0.4)',
                             }}
                         >
                             <View className="flex-row items-center">
                                 <View className="w-[45px] h-[45px] rounded-xl items-center justify-center mr-3"
                                     style={{
-                                        backgroundColor: `rgba(4, 196, 23, 0.3)`,
+                                        backgroundColor: isDark ? 'rgba(5, 122, 85, 0.35)' : 'rgba(4, 196, 23, 0.3)',
                                     }}>
-                                    <CalendarRange size={24} color="#017d0d" />
+                                    <CalendarRange size={24} color={isDark ? '#34d399' : '#017d0d'} />
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase">This Week</Text>

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useColorScheme } from 'nativewind';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Plus, Calendar as CalendarIcon, MoreVertical, Pencil } from 'lucide-react-native';
 import { getSubjects, Subject } from '../../db/db'; // Import helpers
@@ -11,7 +12,8 @@ import DashedRoundedCard from '../../components/ui/DashedRoundedCard';
 export default function SubjectsScreen({ navigation }: any) {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [loading, setLoading] = useState(true);
-    const colorScheme = useColorScheme();
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
 
     // Load Data when screen comes into focus
     useFocusEffect(
@@ -72,10 +74,10 @@ export default function SubjectsScreen({ navigation }: any) {
 
                         // Render "Add New" Button
                         if (item.name === 'ADD_BUTTON') {
-                            const borderColor =
-                                colorScheme === 'dark' ? '#3f3f46' /* zinc-700 */ : '#d4d4d8'; /* zinc-300 */
-                            const cardBg =
-                                colorScheme === 'dark' ? '#27272a' /* zinc-800-ish */ : '#f4f4f5'; /* zinc-100 */
+                            const borderColor = isDark ? '#3f3f46' /* zinc-700 */ : '#d4d4d8'; /* zinc-300 */
+                            const cardBg = isDark ? '#27272a' /* zinc-800 */ : '#f4f4f5'; /* zinc-100 */
+                            const iconColor = isDark ? '#a1a1aa' /* zinc-400 */ : '#71717a'; /* zinc-500 */
+                            const textColor = isDark ? '#a1a1aa' /* zinc-400 */ : '#71717a'; /* zinc-500 */
 
                             return (
                                 <DashedRoundedCard
@@ -92,8 +94,8 @@ export default function SubjectsScreen({ navigation }: any) {
                                         className="w-full h-full items-center justify-center"
                                         activeOpacity={0.8}
                                     >
-                                        <Plus size={24} className="text-zinc-500 mb-1" />
-                                        <Text className="text-zinc-500 text-xs font-medium">Add Subject</Text>
+                                        <Plus size={24} color={iconColor} />
+                                        <Text className="text-xs font-medium" style={{ color: textColor }}>Add Subject</Text>
                                     </TouchableOpacity>
                                 </DashedRoundedCard>
                             );

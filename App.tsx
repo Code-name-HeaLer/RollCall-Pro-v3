@@ -1,29 +1,37 @@
-import 'react-native-gesture-handler'; // <--- 1. IMPORT THIS AT THE VERY TOP
+import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler'; // <--- 2. IMPORT THIS
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useColorScheme } from 'nativewind';
 
 import AppNavigator from './src/navigation/AppNavigator';
-import { initDB } from './src/db/db';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { initDB, getUser } from './src/db/db';
 import './global.css';
 
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
+  // Get the current theme state
+  const { colorScheme, setColorScheme } = useColorScheme();
 
   useEffect(() => {
-    initDB()
-      .then(() => {
-        console.log('Database initialized successfully');
+    const setup = async () => {
+      try {
+        await initDB();
+        const user = await getUser();
+        if (user?.theme_pref && user.theme_pref !== 'system') {
+          setColorScheme(user.theme_pref as 'light' | 'dark');
+        }
+      } catch (e) {
+        console.log('Setup Error:', e);
+      } finally {
         setDbReady(true);
-      })
-      .catch((err) => {
-        console.log('Failed to init DB:', err);
-        setDbReady(true);
-      });
+      }
+    };
+
+    setup();
   }, []);
 
   if (!dbReady) {
@@ -35,16 +43,20 @@ export default function App() {
   }
 
   return (
-    // 3. WRAP EVERYTHING IN GESTURE HANDLER ROOT VIEW
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StatusBar style="auto" />
-            <AppNavigator />
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          {/* DYNAMIC STATUS BAR */}
+          <StatusBar
+            // If Dark Mode -> Text is White ('light'). If Light Mode -> Text is Black ('dark')
+            style={colorScheme === 'dark' ? 'light' : 'dark'}
+
+            // Android Only: Match the background color (Zinc-950 vs Zinc-50)
+            backgroundColor={colorScheme === 'dark' ? '#09090b' : '#f8fafc'}
+          />
+          <AppNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
