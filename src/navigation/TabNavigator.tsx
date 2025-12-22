@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, TouchableOpacity, Platform } from 'react-native';
-import { Home, BookOpen, Calendar, CheckSquare, PieChart, Settings } from 'lucide-react-native';
+import { Home, LibraryBig, CalendarDays, CheckSquare, PieChart, Settings } from 'lucide-react-native';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import SubjectsScreen from '../screens/Subjects/SubjectsScreen';
 import CalendarScreen from '../screens/Calendar/CalendarScreen';
@@ -84,8 +84,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 
                 switch (route.name) {
                     case 'Dashboard': IconComponent = Home; break;
-                    case 'Subjects': IconComponent = BookOpen; break;
-                    case 'Calendar': IconComponent = Calendar; break;
+                    case 'Subjects': IconComponent = LibraryBig; break;
+                    case 'Calendar': IconComponent = CalendarDays; break;
                     case 'Tasks': IconComponent = CheckSquare; break;
                     case 'Stats': IconComponent = PieChart; break;
                     case 'Settings': IconComponent = Settings; break;

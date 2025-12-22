@@ -20,6 +20,7 @@ export default function DashboardScreen() {
     // Key format: "timetable_<id>" or "extra_<id>" to track per class instance
     const [attendanceLog, setAttendanceLog] = useState<Record<string, string>>({});
     const [subjectStats, setSubjectStats] = useState<Record<number, { total: number, attended: number }>>({});
+    const [weeklyClassCount, setWeeklyClassCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
     // --- EXTRA CLASS MODAL STATE ---
@@ -79,6 +80,15 @@ export default function DashboardScreen() {
             }
         }
         setSubjectStats(statsMap);
+
+        // 6. Calculate Weekly Class Count (all 7 days)
+        let totalWeeklyClasses = 0;
+        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+            const daySchedule = await getScheduleForDay(dayIndex);
+            totalWeeklyClasses += daySchedule.length;
+        }
+        setWeeklyClassCount(totalWeeklyClasses);
+
         setLoading(false);
     };
 
@@ -208,7 +218,7 @@ export default function DashboardScreen() {
                             <View className="flex-row items-center">
                                 <View className="w-[45px] h-[45px] rounded-xl items-center justify-center mr-3"
                                     style={{
-                                        backgroundColor: `rgba(255, 240, 31, 0.3)`,
+                                        backgroundColor: `rgba(250, 250, 5, 0.3)`,
                                     }}>
                                     <NotebookText size={24} color="#7d7501" />
                                 </View>
@@ -237,7 +247,7 @@ export default function DashboardScreen() {
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase">This Week</Text>
-                                    <Text className="text-zinc-900 dark:text-white text-3xl font-bold">24</Text>
+                                    <Text className="text-zinc-900 dark:text-white text-3xl font-bold">{weeklyClassCount}</Text>
                                 </View>
                             </View>
                         </Pressable>
