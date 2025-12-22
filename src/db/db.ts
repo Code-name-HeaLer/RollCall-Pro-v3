@@ -4,7 +4,7 @@ let dbInstance: SQLiteDatabase | null = null;
 
 const getDatabase = async () => {
     if (!dbInstance) {
-        dbInstance = await openDatabaseAsync('rollcall_v2.db');
+        dbInstance = await openDatabaseAsync('rollcall_v3.db');
     }
     return dbInstance;
 };

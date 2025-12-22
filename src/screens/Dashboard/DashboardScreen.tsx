@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Bell, Check, X, Ban, Umbrella, Coffee, Clock, Plus, MapPin } from 'lucide-react-native';
