@@ -1,17 +1,88 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
-import { X, Plus, MapPin, Clock } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, FlatList, Alert, Platform } from 'react-native';
+import { X, Plus, MapPin, Clock, Trash2, Check } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker'; // Ensure this is installed
+import { getSubjects, Subject, addScheduleItem, getScheduleForDay, TimetableItem, deleteScheduleItem } from '../../db/db';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function TimetableScreen({ navigation }: any) {
-    const [selectedDay, setSelectedDay] = useState(1); // Monday default
+    const [selectedDay, setSelectedDay] = useState(new Date().getDay()); // Default to today
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+    // Data State
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [schedule, setSchedule] = useState<TimetableItem[]>([]);
+    const [refresh, setRefresh] = useState(0); // Trigger re-fetch
+
+    // Form State
+    const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+    const [location, setLocation] = useState('');
+
+    // Time Picker State
+    const [startTime, setStartTime] = useState(new Date());
+    const [endTime, setEndTime] = useState(new Date());
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
+
+    // 1. Load Subjects on Mount
+    useEffect(() => {
+        getSubjects().then(setSubjects);
+    }, []);
+
+    // 2. Load Schedule when Day changes or Refresh triggers
+    useEffect(() => {
+        getScheduleForDay(selectedDay).then(setSchedule);
+    }, [selectedDay, refresh]);
+
+    // Helper: Format Time object to "HH:MM" string
+    const formatTime = (date: Date) => {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    };
+
+    const handleSave = async () => {
+        if (!selectedSubjectId) {
+            Alert.alert("Missing Info", "Please select a subject.");
+            return;
+        }
+
+        try {
+            await addScheduleItem(
+                selectedSubjectId,
+                selectedDay,
+                formatTime(startTime),
+                formatTime(endTime),
+                location
+            );
+            setRefresh(prev => prev + 1); // Reload list
+            setIsAddModalOpen(false);
+            // Reset Form
+            setLocation('');
+            setSelectedSubjectId(null);
+        } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Could not save class.");
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        Alert.alert("Delete Class", "Are you sure?", [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: "Delete", style: "destructive", onPress: async () => {
+                    await deleteScheduleItem(id);
+                    setRefresh(prev => prev + 1);
+                }
+            }
+        ])
+    };
+
     return (
-        <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-zinc-950" edges={['top', 'left', 'right']}>
-            <View className="flex-1 p-6">
+        <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+
+            {/* 2. ADDED: Inner View for padding (keeps content neat) */}
+            <View className="flex-1 px-6 pt-4">
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-6">
                     <Text className="text-2xl font-bold text-zinc-900 dark:text-white">Manage Schedule</Text>
@@ -20,7 +91,7 @@ export default function TimetableScreen({ navigation }: any) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Day Selector (Horizontal Scroll) */}
+                {/* Day Selector */}
                 <View className="h-14 mb-4">
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
                         {DAYS.map((day, index) => (
@@ -35,26 +106,36 @@ export default function TimetableScreen({ navigation }: any) {
                     </ScrollView>
                 </View>
 
-                {/* Class List for Selected Day */}
-                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                    {/* Mock Existing Class */}
-                    <View className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-l-indigo-500 border-zinc-100 dark:border-zinc-800 mb-3 shadow-sm">
-                        <View className="flex-row justify-between items-start">
+                {/* Class List */}
+                <FlatList
+                    data={schedule}
+                    keyExtractor={(item) => item.id.toString()}
+                    ListEmptyComponent={
+                        <View className="mt-10 items-center">
+                            <Text className="text-zinc-400">No classes scheduled for {DAYS[selectedDay]}.</Text>
+                        </View>
+                    }
+                    renderItem={({ item }) => (
+                        <View className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-zinc-100 dark:border-zinc-800 mb-3 shadow-sm flex-row justify-between items-center" style={{ borderLeftColor: item.subject_color }}>
                             <View>
-                                <Text className="text-lg font-bold text-zinc-900 dark:text-white">Computer Science</Text>
+                                <Text className="text-lg font-bold text-zinc-900 dark:text-white">{item.subject_name}</Text>
                                 <View className="flex-row items-center mt-1">
                                     <Clock size={14} className="text-zinc-400 mr-1" />
-                                    <Text className="text-zinc-500 text-xs mr-3">10:00 AM - 11:00 AM</Text>
-                                    <MapPin size={14} className="text-zinc-400 mr-1" />
-                                    <Text className="text-zinc-500 text-xs">Room 304</Text>
+                                    <Text className="text-zinc-500 text-xs mr-3">{item.start_time} - {item.end_time}</Text>
+                                    {item.location ? (
+                                        <>
+                                            <MapPin size={14} className="text-zinc-400 mr-1" />
+                                            <Text className="text-zinc-500 text-xs">{item.location}</Text>
+                                        </>
+                                    ) : null}
                                 </View>
                             </View>
-                            <TouchableOpacity>
-                                <Text className="text-indigo-600 font-bold text-xs">Edit</Text>
+                            <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-2">
+                                <Trash2 size={18} className="text-red-400" />
                             </TouchableOpacity>
                         </View>
-                    </View>
-                </ScrollView>
+                    )}
+                />
 
                 {/* Add Class FAB */}
                 <TouchableOpacity
@@ -64,7 +145,7 @@ export default function TimetableScreen({ navigation }: any) {
                     <Plus size={24} className="text-white dark:text-zinc-900" />
                 </TouchableOpacity>
 
-                {/* --- Internal Modal: Add Class Form --- */}
+                {/* --- ADD CLASS MODAL --- */}
                 <Modal visible={isAddModalOpen} animationType="slide" presentationStyle="pageSheet">
                     <View className="flex-1 bg-zinc-50 dark:bg-zinc-950 p-6">
                         <View className="flex-row justify-between items-center mb-8">
@@ -74,30 +155,60 @@ export default function TimetableScreen({ navigation }: any) {
                             </TouchableOpacity>
                         </View>
 
-                        {/* Mock Subject Selector */}
+                        {/* Subject Selector */}
                         <View className="mb-6">
                             <Text className="text-zinc-500 font-medium mb-2">Subject</Text>
-                            <TouchableOpacity className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex-row items-center">
-                                <View className="w-3 h-3 rounded-full bg-indigo-500 mr-3" />
-                                <Text className="text-zinc-900 dark:text-white font-medium">Select Subject...</Text>
-                            </TouchableOpacity>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-2">
+                                {subjects.map(sub => (
+                                    <TouchableOpacity
+                                        key={sub.id}
+                                        onPress={() => setSelectedSubjectId(sub.id)}
+                                        className={`mr-3 p-3 rounded-xl border ${selectedSubjectId === sub.id ? 'bg-indigo-50 border-indigo-500' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'}`}
+                                    >
+                                        <View className="flex-row items-center gap-2">
+                                            <View style={{ backgroundColor: sub.color }} className="w-3 h-3 rounded-full" />
+                                            <Text className={`font-bold ${selectedSubjectId === sub.id ? 'text-indigo-700' : 'text-zinc-700 dark:text-zinc-300'}`}>{sub.name}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
                         </View>
 
                         {/* Time Pickers */}
                         <View className="flex-row gap-4 mb-6">
                             <View className="flex-1">
                                 <Text className="text-zinc-500 font-medium mb-2">Start Time</Text>
-                                <TextInput
-                                    placeholder="10:00" placeholderTextColor="#A1A1AA"
-                                    className="bg-white dark:bg-zinc-900 p-4 rounded-2xl text-lg text-zinc-900 dark:text-white border border-zinc-100 dark:border-zinc-800"
-                                />
+                                <TouchableOpacity onPress={() => setShowStartPicker(true)} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                                    <Text className="text-zinc-900 dark:text-white font-bold text-center">{formatTime(startTime)}</Text>
+                                </TouchableOpacity>
+                                {showStartPicker && (
+                                    <DateTimePicker
+                                        value={startTime}
+                                        mode="time"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(event, date) => {
+                                            setShowStartPicker(false);
+                                            if (date) setStartTime(date);
+                                        }}
+                                    />
+                                )}
                             </View>
                             <View className="flex-1">
                                 <Text className="text-zinc-500 font-medium mb-2">End Time</Text>
-                                <TextInput
-                                    placeholder="11:00" placeholderTextColor="#A1A1AA"
-                                    className="bg-white dark:bg-zinc-900 p-4 rounded-2xl text-lg text-zinc-900 dark:text-white border border-zinc-100 dark:border-zinc-800"
-                                />
+                                <TouchableOpacity onPress={() => setShowEndPicker(true)} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                                    <Text className="text-zinc-900 dark:text-white font-bold text-center">{formatTime(endTime)}</Text>
+                                </TouchableOpacity>
+                                {showEndPicker && (
+                                    <DateTimePicker
+                                        value={endTime}
+                                        mode="time"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(event, date) => {
+                                            setShowEndPicker(false);
+                                            if (date) setEndTime(date);
+                                        }}
+                                    />
+                                )}
                             </View>
                         </View>
 
@@ -106,11 +217,13 @@ export default function TimetableScreen({ navigation }: any) {
                             <Text className="text-zinc-500 font-medium mb-2">Location (Optional)</Text>
                             <TextInput
                                 placeholder="e.g. Room 304" placeholderTextColor="#A1A1AA"
+                                value={location}
+                                onChangeText={setLocation}
                                 className="bg-white dark:bg-zinc-900 p-4 rounded-2xl text-lg text-zinc-900 dark:text-white border border-zinc-100 dark:border-zinc-800"
                             />
                         </View>
 
-                        <TouchableOpacity className="bg-indigo-600 p-4 rounded-2xl items-center">
+                        <TouchableOpacity onPress={handleSave} className="bg-indigo-600 p-4 rounded-2xl items-center shadow-lg shadow-indigo-500/30">
                             <Text className="text-white font-bold text-lg">Add to Schedule</Text>
                         </TouchableOpacity>
                     </View>

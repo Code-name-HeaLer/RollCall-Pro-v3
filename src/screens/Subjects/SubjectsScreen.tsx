@@ -2,8 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, useColorScheme } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
-import { Plus, Calendar as CalendarIcon, MoreVertical } from 'lucide-react-native';
+import { Plus, Calendar as CalendarIcon, MoreVertical, Pencil } from 'lucide-react-native';
 import { getSubjects, Subject } from '../../db/db'; // Import helpers
+
+import AttendanceSpinner from '../../components/ui/AttendanceSpinner';
+import DashedRoundedCard from '../../components/ui/DashedRoundedCard';
 
 export default function SubjectsScreen({ navigation }: any) {
     const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -69,21 +72,30 @@ export default function SubjectsScreen({ navigation }: any) {
 
                         // Render "Add New" Button
                         if (item.name === 'ADD_BUTTON') {
+                            const borderColor =
+                                colorScheme === 'dark' ? '#3f3f46' /* zinc-700 */ : '#d4d4d8'; /* zinc-300 */
+                            const cardBg =
+                                colorScheme === 'dark' ? '#27272a' /* zinc-800-ish */ : '#f4f4f5'; /* zinc-100 */
+
                             return (
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('AddSubject')}
-                                    className="w-[48%] h-48 bg-zinc-100 dark:bg-zinc-900 rounded-3xl items-center justify-center mb-4"
-                                    style={{
-                                        borderWidth: 2,
-                                        borderStyle: 'dashed',
-                                        borderColor: colorScheme === 'dark' ? '#3F3F46' : '#D4D4D8', // zinc-700 for dark, zinc-300 for light
-                                    }}
+                                <DashedRoundedCard
+                                    borderColor={borderColor}
+                                    backgroundColor={cardBg}
+                                    borderRadius={24}
+                                    strokeWidth={2}
+                                    dashArray="6 4"
+                                    style={{ width: '48%', height: 112, marginBottom: 12 }} // h-28 ~ 112
                                 >
-                                    <View className="w-12 h-12 bg-zinc-200 dark:bg-zinc-800 rounded-full items-center justify-center mb-2">
-                                        <Plus size={24} color="#71717A" />
-                                    </View>
-                                    <Text className="text-zinc-500 font-medium">Add Subject</Text>
-                                </TouchableOpacity>
+                                    {/* Make inner content transparent so the SVG border remains visible */}
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('AddSubject')}
+                                        className="w-full h-full items-center justify-center"
+                                        activeOpacity={0.8}
+                                    >
+                                        <Plus size={24} className="text-zinc-500 mb-1" />
+                                        <Text className="text-zinc-500 text-xs font-medium">Add Subject</Text>
+                                    </TouchableOpacity>
+                                </DashedRoundedCard>
                             );
                         }
 
@@ -92,23 +104,53 @@ export default function SubjectsScreen({ navigation }: any) {
                         const percentColor = getPercentageColor(percentage);
 
                         return (
-                            <TouchableOpacity className="w-[48%] h-48 bg-white dark:bg-zinc-900 rounded-3xl p-4 justify-between mb-4 border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                                <View>
-                                    <View className="flex-row justify-between items-start mb-2">
-                                        <View style={{ backgroundColor: item.color }} className="w-3 h-3 rounded-full" />
-                                        <MoreVertical size={16} className="text-zinc-300" />
-                                    </View>
-                                    <Text className="text-lg font-bold text-zinc-900 dark:text-white leading-5 mb-1" numberOfLines={2}>
-                                        {item.name}
-                                    </Text>
-                                    <Text className="text-xs text-zinc-500" numberOfLines={1}>
-                                        {item.teacher || 'No Teacher'}
-                                    </Text>
+                            <TouchableOpacity
+                                // Optional: If you want clicking the card to open Edit, keep this. 
+                                // Or you can make just the Pencil clickable later.
+                                onPress={() => navigation.navigate('AddSubject', { subject: item })} // We will handle edit logic later
+                                style={{
+                                    backgroundColor: `${item.color}20`,
+                                    borderColor: `${item.color}40`,
+                                }}
+                                // Changed h-28 to h-32 for better spacing
+                                className="w-[48%] h-32 rounded-3xl p-3 mb-3 border relative"
+                            >
+                                {/* Top Right: Edit Icon (Absolute) */}
+                                <View className="absolute top-3 right-3 z-10 bg-white/40 dark:bg-black/10 p-1.5 rounded-full">
+                                    <Pencil size={12} color={item.color} />
                                 </View>
 
-                                <View>
-                                    <Text className={`text-3xl font-bold ${percentColor}`}>{percentage}%</Text>
-                                    <Text className="text-xs text-zinc-400">Attendance</Text>
+                                {/* Main Content Row */}
+                                <View className="flex-row items-center justify-between h-full pt-2">
+
+                                    {/* Left Side: Info */}
+                                    <View className="flex-1 mr-2 justify-center">
+                                        <Text
+                                            className="text-base font-bold text-zinc-900 dark:text-white leading-5 mb-1"
+                                            numberOfLines={2}
+                                        >
+                                            {item.name}
+                                        </Text>
+
+                                        <Text
+                                            className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide mb-2"
+                                            numberOfLines={1}
+                                        >
+                                            {item.teacher || 'No Teacher'}
+                                        </Text>
+
+                                        {/* Stats Badge: 5/7 */}
+                                        <View className="self-start bg-white/60 dark:bg-black/20 px-2 py-1 rounded-lg">
+                                            <Text className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                                                {item.attended_classes} <Text className="text-zinc-400 font-normal">/</Text> {item.total_classes}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    {/* Right Side: Spinner */}
+                                    <View>
+                                        <AttendanceSpinner percentage={percentage} radius={24} strokeWidth={4} />
+                                    </View>
                                 </View>
                             </TouchableOpacity>
                         );

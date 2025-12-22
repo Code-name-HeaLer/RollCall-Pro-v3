@@ -4,7 +4,7 @@ let dbInstance: SQLiteDatabase | null = null;
 
 const getDatabase = async () => {
     if (!dbInstance) {
-        dbInstance = await openDatabaseAsync('rollcall.db');
+        dbInstance = await openDatabaseAsync('rollcall_v2.db');
     }
     return dbInstance;
 };
@@ -123,4 +123,155 @@ export const getSubjects = async (): Promise<Subject[]> => {
 export const deleteSubject = async (id: number): Promise<void> => {
     const db = await getDatabase();
     await db.runAsync('DELETE FROM subjects WHERE id = ?', [id]);
+};
+
+// ... existing code ...
+
+// --- TIMETABLE OPERATIONS ---
+
+export interface TimetableItem {
+    id: number;
+    subject_id: number;
+    day_index: number;
+    start_time: string; // "10:00"
+    end_time: string;   // "11:00"
+    location: string;
+    // Joins
+    subject_name?: string;
+    subject_color?: string;
+    teacher?: string;
+}
+
+// 1. Add to Schedule
+export const addScheduleItem = async (
+    subjectId: number,
+    dayIndex: number,
+    startTime: string,
+    endTime: string,
+    location: string
+): Promise<void> => {
+    const db = await getDatabase();
+    await db.runAsync(
+        'INSERT INTO timetable (subject_id, day_index, start_time, end_time, location) VALUES (?, ?, ?, ?, ?)',
+        [subjectId, dayIndex, startTime, endTime, location]
+    );
+};
+
+// 2. Get Schedule for a specific Day (Joined with Subject details)
+export const getScheduleForDay = async (dayIndex: number): Promise<TimetableItem[]> => {
+    const db = await getDatabase();
+    return await db.getAllAsync<TimetableItem>(
+        `SELECT t.*, s.name as subject_name, s.color as subject_color, s.teacher 
+       FROM timetable t 
+       JOIN subjects s ON t.subject_id = s.id 
+       WHERE t.day_index = ? 
+       ORDER BY t.start_time ASC`,
+        [dayIndex]
+    );
+};
+
+// 3. Delete Schedule Item
+export const deleteScheduleItem = async (id: number): Promise<void> => {
+    const db = await getDatabase();
+    await db.runAsync('DELETE FROM timetable WHERE id = ?', [id]);
+};
+
+// ... existing code ...
+
+// --- ATTENDANCE OPERATIONS ---
+
+export interface AttendanceRecord {
+    id: number;
+    subject_id: number;
+    date: string;
+    status: 'present' | 'absent' | 'cancelled' | 'holiday';
+}
+
+// 1. Mark Attendance (Insert or Update)
+export const markAttendance = async (
+    subjectId: number,
+    date: string,
+    status: 'present' | 'absent' | 'cancelled' | 'holiday'
+): Promise<void> => {
+    const db = await getDatabase();
+
+    // A. Check if record exists for this day/subject
+    const existing = await db.getFirstAsync<{ id: number }>(
+        'SELECT id FROM attendance WHERE subject_id = ? AND date = ?',
+        [subjectId, date]
+    );
+
+    if (existing) {
+        // Update existing
+        await db.runAsync(
+            'UPDATE attendance SET status = ? WHERE id = ?',
+            [status, existing.id]
+        );
+    } else {
+        // Insert new
+        await db.runAsync(
+            'INSERT INTO attendance (subject_id, date, status) VALUES (?, ?, ?)',
+            [subjectId, date, status]
+        );
+    }
+
+    // B. Recalculate Subject Stats (Total/Attended)
+    // 1. Count Total (Present + Absent) - Exclude Cancelled/Holiday
+    const totalResult = await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM attendance 
+       WHERE subject_id = ? AND status IN ('present', 'absent')`,
+        [subjectId]
+    );
+
+    // 2. Count Attended (Present only)
+    const attendedResult = await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM attendance 
+       WHERE subject_id = ? AND status = 'present'`,
+        [subjectId]
+    );
+
+    const newTotal = totalResult?.count || 0;
+    const newAttended = attendedResult?.count || 0;
+
+    // C. Update Subjects Table
+    // Note: We add the "Manual" counts entered during creation (if any)
+    // For simplicity now, we overwrite based on calculated logs, 
+    // but if you want to keep manual mid-sem entries, logic needs to be additive. 
+    // Let's assume we update the columns directly.
+    await db.runAsync(
+        'UPDATE subjects SET total_classes = ?, attended_classes = ? WHERE id = ?',
+        [newTotal, newAttended, subjectId]
+    );
+};
+
+// 2. Get Attendance for a specific Date (to show active buttons)
+export const getAttendanceByDate = async (date: string): Promise<AttendanceRecord[]> => {
+    const db = await getDatabase();
+    return await db.getAllAsync<AttendanceRecord>(
+        'SELECT * FROM attendance WHERE date = ?',
+        [date]
+    );
+};
+
+// 3. Get Single Subject Details (for Spinner update)
+export const getSubjectById = async (id: number): Promise<Subject | null> => {
+    const db = await getDatabase();
+    return await db.getFirstAsync<Subject>('SELECT * FROM subjects WHERE id = ?', [id]);
+};
+
+
+// ... existing code ...
+
+// 4. Update Subject Details
+export const updateSubject = async (
+    id: number,
+    name: string,
+    teacher: string,
+    color: string
+): Promise<void> => {
+    const db = await getDatabase();
+    await db.runAsync(
+        'UPDATE subjects SET name = ?, teacher = ?, color = ? WHERE id = ?',
+        [name, teacher, color, id]
+    );
 };
