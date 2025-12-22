@@ -44,7 +44,7 @@ export default function TabNavigator() {
 function CustomTabBar({ state, descriptors, navigation }: any) {
     return (
         <View
-            className="absolute bottom-6 left-5 right-5 flex-row items-center justify-between bg-white dark:bg-zinc-900 rounded-3xl px-6 py-4 border border-zinc-100 dark:border-zinc-800"
+            className="absolute bottom-6 left-5 right-5 flex-row items-center justify-between bg-white dark:bg-zinc-900 rounded-3xl px-6 py-4 border border-indigo-300 dark:border-indigo-800"
             style={{
                 // iOS shadows
                 shadowColor: '#4F46E5',

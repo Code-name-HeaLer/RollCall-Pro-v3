@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView } from 'react-native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
-import { Moon, Bell, Download, Upload, Info, ChevronRight } from 'lucide-react-native';
+import { Moon, Bell, Download, Upload, Info, ChevronRight, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function SettingsScreen() {
@@ -28,8 +28,8 @@ export default function SettingsScreen() {
                             </View>
                             <Text className="text-base font-medium text-zinc-900 dark:text-white">Dark Mode</Text>
                         </View>
-                        <Switch 
-                            trackColor={{ false: '#767577', true: '#4F46E5' }} 
+                        <Switch
+                            trackColor={{ false: '#767577', true: '#4F46E5' }}
                             value={isDarkModeEnabled}
                             onValueChange={handleThemeToggle}
                         />
@@ -80,12 +80,21 @@ export default function SettingsScreen() {
                         </View>
                         <ChevronRight size={20} className="text-zinc-400" />
                     </TouchableOpacity>
+                    <TouchableOpacity className="flex-row items-center justify-between p-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <View className="flex-row items-center gap-3">
+                            <View className="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full items-center justify-center">
+                                <Trash2 size={18} className="text-red-600 dark:text-red-400" />
+                            </View>
+                            <Text className="text-base font-medium text-zinc-900 dark:text-white">Delete All Data</Text>
+                        </View>
+                        <ChevronRight size={20} className="text-zinc-400" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Section: About */}
-                <View className="items-center mt-4">
-                    <Text className="text-zinc-400 text-sm">RollCall Pro v1.0.0</Text>
-                    <Text className="text-zinc-500 text-xs mt-1">Made with ❤️</Text>
+                <View className="items-center mt-1 mb-4">
+                    <Text className="text-zinc-400 text-sm">RollCall Pro v3.1.2</Text>
+                    <Text className="text-zinc-500 text-xs mt-1">Made with ❤️ | by HeaLer</Text>
                 </View>
 
             </ScrollView>
