@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Platform, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
-import { Bell, Check, X, Ban, Umbrella, Coffee, Clock, Plus, MapPin } from 'lucide-react-native';
+import { Bell, Check, X, Ban, Umbrella, Coffee, Clock, Plus, MapPin, BookOpen, Calendar, NotebookText, CalendarRange } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AttendanceSpinner from '../../components/ui/AttendanceSpinner';
 import {
@@ -157,26 +157,90 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* At A Glance */}
-                <View className="flex-row gap-4 mb-8">
-                    <View className="flex-1 bg-indigo-600 rounded-3xl p-5 shadow-lg shadow-indigo-500/30">
-                        <View className="w-10 h-10 bg-indigo-400/30 rounded-full items-center justify-center mb-3">
-                            <Text className="text-white font-bold">All</Text>
+                <View className="gap-4 mb-8">
+                    <Pressable
+                        className="rounded-2xl p-5"
+                        style={{
+                            backgroundColor: '#6366f1',
+                            shadowColor: '#6366f1',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.15,
+                            shadowRadius: 12,
+                            elevation: 4,
+                        }}
+                    >
+                        <View className="flex-row items-center justify-between">
+                            <View className="flex-1">
+                                <View className="bg-white/20 self-start px-2.5 py-1 rounded-full mb-2">
+                                    <Text className="text-white text-[10px] font-semibold">ALL SUBJECTS</Text>
+                                </View>
+                                <Text className="text-white/80 text-xs font-medium uppercase tracking-wider mb-1">
+                                    Overall Attendance
+                                </Text>
+                                <Text className="text-white text-4xl font-bold tracking-tight">
+                                    {Object.keys(subjectStats).length > 0
+                                        ? Math.round(
+                                            Object.values(subjectStats).reduce(
+                                                (acc, curr) => acc + (curr.total > 0 ? (curr.attended / curr.total) * 100 : 0),
+                                                0
+                                            ) / Object.keys(subjectStats).length
+                                        ) + '%'
+                                        : '--%'}
+                                </Text>
+                            </View>
+                            <View className="w-14 h-14 bg-white/10 rounded-full items-center justify-center ml-3">
+                                <Text className="text-white text-2xl">📊</Text>
+                            </View>
                         </View>
-                        <Text className="text-white/80 text-sm font-medium">Overview</Text>
-                        <Text className="text-white text-3xl font-bold mt-1">
-                            {Object.keys(subjectStats).length > 0
-                                ? Math.round(Object.values(subjectStats).reduce((acc, curr) => acc + (curr.total > 0 ? (curr.attended / curr.total) * 100 : 0), 0) / Object.keys(subjectStats).length) + '%'
-                                : '--%'}
-                        </Text>
-                    </View>
+                    </Pressable>
 
-                    <View className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl p-5 border border-zinc-100 dark:border-zinc-800 shadow-sm">
-                        <View className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full items-center justify-center mb-3">
-                            <Text className="text-zinc-900 dark:text-white font-bold">#</Text>
-                        </View>
-                        <Text className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Classes Today</Text>
-                        <Text className="text-zinc-900 dark:text-white text-3xl font-bold mt-1">{todaysClasses.length}</Text>
+                    <View className="flex-row justify-between">
+                        <Pressable
+                            className="rounded-2xl p-3 border"
+                            style={{
+                                width: "42%",
+                                height: "100%",
+                                marginRight: 8,
+                                backgroundColor: `rgba(255, 240, 31, 0.2)`,
+                                borderColor: `rgba(255, 240, 31, 0.4)`,
+                            }}
+                        >
+                            <View className="flex-row items-center">
+                                <View className="w-[45px] h-[45px] rounded-xl items-center justify-center mr-3"
+                                    style={{
+                                        backgroundColor: `rgba(255, 240, 31, 0.3)`,
+                                    }}>
+                                    <NotebookText size={24} color="#7d7501" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase">Today</Text>
+                                    <Text className="text-zinc-900 dark:text-white text-3xl font-bold">{todaysClasses.length}</Text>
+                                </View>
+                            </View>
+                        </Pressable>
+
+                        <Pressable
+                            className="rounded-2xl p-3 border"
+                            style={{
+                                flex: 1,
+                                marginLeft: 8,
+                                backgroundColor: `rgba(55, 255, 20, 0.2)`,
+                                borderColor: `rgba(55, 255, 20, 0.4)`,
+                            }}
+                        >
+                            <View className="flex-row items-center">
+                                <View className="w-[45px] h-[45px] rounded-xl items-center justify-center mr-3"
+                                    style={{
+                                        backgroundColor: `rgba(4, 196, 23, 0.3)`,
+                                    }}>
+                                    <CalendarRange size={24} color="#017d0d" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-zinc-500 dark:text-zinc-400 text-xs font-medium uppercase">This Week</Text>
+                                    <Text className="text-zinc-900 dark:text-white text-3xl font-bold">24</Text>
+                                </View>
+                            </View>
+                        </Pressable>
                     </View>
                 </View>
 
