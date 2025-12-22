@@ -1,20 +1,36 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
-import { Bell, Check, X, Ban, Umbrella, Coffee, Clock } from 'lucide-react-native';
-import { getUser, getScheduleForDay, TimetableItem, getAttendanceByDate, markAttendance, AttendanceRecord, getSubjectById, Subject } from '../../db/db';
+import { Bell, Check, X, Ban, Umbrella, Coffee, Clock, Plus, MapPin } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import AttendanceSpinner from '../../components/ui/AttendanceSpinner';
+import {
+    getUser, getScheduleForDay, TimetableItem, getAttendanceByDate,
+    markAttendance, getSubjectById, getSubjects, Subject,
+    addExtraClass, getExtraClassesForDate
+} from '../../db/db';
 
 export default function DashboardScreen() {
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-    const isoDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD for DB
+    const isoDate = new Date().toISOString().split('T')[0];
 
     const [userName, setUserName] = useState('Scholar');
     const [todaysClasses, setTodaysClasses] = useState<TimetableItem[]>([]);
-    const [attendanceLog, setAttendanceLog] = useState<Record<number, string>>({}); // Map subjectId -> status
-    const [subjectStats, setSubjectStats] = useState<Record<number, { total: number, attended: number }>>({}); // Map subjectId -> stats
+    // Key format: "timetable_<id>" or "extra_<id>" to track per class instance
+    const [attendanceLog, setAttendanceLog] = useState<Record<string, string>>({});
+    const [subjectStats, setSubjectStats] = useState<Record<number, { total: number, attended: number }>>({});
     const [loading, setLoading] = useState(true);
+
+    // --- EXTRA CLASS MODAL STATE ---
+    const [isExtraModalOpen, setIsExtraModalOpen] = useState(false);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+    const [extraStartTime, setExtraStartTime] = useState(new Date());
+    const [extraEndTime, setExtraEndTime] = useState(new Date());
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
+    const [extraLocation, setExtraLocation] = useState('');
 
     // Load Data
     useFocusEffect(
@@ -25,44 +41,62 @@ export default function DashboardScreen() {
 
     const loadData = async () => {
         setLoading(true);
-        // 1. User
         const user = await getUser();
         if (user?.name) setUserName(user.name);
 
-        // 2. Schedule
+        // 1. Fetch Weekly Schedule
         const todayIndex = new Date().getDay();
-        const schedule = await getScheduleForDay(todayIndex);
-        setTodaysClasses(schedule);
+        const regularSchedule = await getScheduleForDay(todayIndex);
 
-        // 3. Existing Attendance for Today
+        // 2. Fetch Extra Classes for Today
+        const extraClasses = await getExtraClassesForDate(isoDate);
+
+        // 3. Merge & Sort by Time
+        const merged = [...regularSchedule, ...extraClasses].sort((a, b) => {
+            return a.start_time.localeCompare(b.start_time);
+        });
+        setTodaysClasses(merged);
+
+        // 4. Attendance Logs - Map by class instance ID
         const logs = await getAttendanceByDate(isoDate);
-        const logMap: Record<number, string> = {};
+        const logMap: Record<string, string> = {};
         logs.forEach(log => {
-            logMap[log.subject_id] = log.status;
+            // Use class instance ID as key: "timetable_<id>" or "extra_<id>"
+            if (log.timetable_id) {
+                logMap[`timetable_${log.timetable_id}`] = log.status;
+            } else if (log.extra_class_id) {
+                logMap[`extra_${log.extra_class_id}`] = log.status;
+            }
         });
         setAttendanceLog(logMap);
 
-        // 4. Fetch Stats for these subjects (for spinners)
+        // 5. Stats for Spinners
         const statsMap: Record<number, { total: number, attended: number }> = {};
-        for (const item of schedule) {
-            const sub = await getSubjectById(item.subject_id);
-            if (sub) {
-                statsMap[sub.id] = { total: sub.total_classes, attended: sub.attended_classes };
+        for (const item of merged) {
+            if (!statsMap[item.subject_id]) { // Avoid duplicate fetch
+                const sub = await getSubjectById(item.subject_id);
+                if (sub) statsMap[sub.id] = { total: sub.total_classes, attended: sub.attended_classes };
             }
         }
         setSubjectStats(statsMap);
-
         setLoading(false);
     };
 
-    const handleMarkAttendance = async (subjectId: number, status: 'present' | 'absent' | 'cancelled' | 'holiday') => {
-        // Optimistic Update (UI updates immediately)
-        setAttendanceLog(prev => ({ ...prev, [subjectId]: status }));
+    const handleMarkAttendance = async (
+        subjectId: number,
+        status: 'present' | 'absent' | 'cancelled' | 'holiday',
+        timetableId?: number | null,
+        extraClassId?: number | null
+    ) => {
+        // Update local state with class instance key
+        const logKey = timetableId ? `timetable_${timetableId}` : extraClassId ? `extra_${extraClassId}` : null;
+        if (logKey) {
+            setAttendanceLog(prev => ({ ...prev, [logKey]: status }));
+        }
 
-        // Save to DB
-        await markAttendance(subjectId, isoDate, status);
+        await markAttendance(subjectId, isoDate, status, timetableId, extraClassId);
 
-        // Refresh Stats (Spinner)
+        // Refresh Stats (spinner shows overall subject attendance)
         const sub = await getSubjectById(subjectId);
         if (sub) {
             setSubjectStats(prev => ({
@@ -72,12 +106,41 @@ export default function DashboardScreen() {
         }
     };
 
+    const openExtraModal = async () => {
+        const subs = await getSubjects();
+        setSubjects(subs);
+        setIsExtraModalOpen(true);
+    };
+
+    const saveExtraClass = async () => {
+        if (!selectedSubjectId) return;
+        try {
+            await addExtraClass(
+                selectedSubjectId,
+                isoDate,
+                extraStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                extraEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                extraLocation
+            );
+            setIsExtraModalOpen(false);
+            loadData(); // Refresh Dashboard
+            // Reset Form
+            setSelectedSubjectId(null);
+            setExtraLocation('');
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     // Helper: Calculate Spinner %
     const getPercentage = (subId: number) => {
         const stats = subjectStats[subId];
         if (!stats || stats.total === 0) return 0;
         return Math.round((stats.attended / stats.total) * 100);
     };
+
+    // Format Time Helper
+    const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
     return (
         <ScreenWrapper>
@@ -96,14 +159,12 @@ export default function DashboardScreen() {
 
                 {/* At A Glance */}
                 <View className="flex-row gap-4 mb-8">
-                    {/* Logic for overall can be added later, for now static or basic calc */}
                     <View className="flex-1 bg-indigo-600 rounded-3xl p-5 shadow-lg shadow-indigo-500/30">
                         <View className="w-10 h-10 bg-indigo-400/30 rounded-full items-center justify-center mb-3">
                             <Text className="text-white font-bold">All</Text>
                         </View>
                         <Text className="text-white/80 text-sm font-medium">Overview</Text>
                         <Text className="text-white text-3xl font-bold mt-1">
-                            {/* Simple average of currently visible subjects */}
                             {Object.keys(subjectStats).length > 0
                                 ? Math.round(Object.values(subjectStats).reduce((acc, curr) => acc + (curr.total > 0 ? (curr.attended / curr.total) * 100 : 0), 0) / Object.keys(subjectStats).length) + '%'
                                 : '--%'}
@@ -119,11 +180,12 @@ export default function DashboardScreen() {
                     </View>
                 </View>
 
-                {/* Schedule Section */}
+                {/* Schedule Section Header */}
                 <View className="flex-row justify-between items-center mb-4">
                     <Text className="text-xl font-bold text-zinc-900 dark:text-white">Today's Schedule</Text>
-                    <TouchableOpacity className="flex-row items-center bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full">
-                        <Text className="text-xs font-bold text-zinc-600 dark:text-zinc-300 mr-1">Extra Class?</Text>
+                    <TouchableOpacity onPress={openExtraModal} className="flex-row items-center bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full">
+                        <Plus size={14} className="text-zinc-600 dark:text-zinc-300 mr-1" />
+                        <Text className="text-xs font-bold text-zinc-600 dark:text-zinc-300">Extra Class</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -134,32 +196,128 @@ export default function DashboardScreen() {
                     <View className="bg-white dark:bg-zinc-900 rounded-3xl p-8 items-center justify-center border border-zinc-100 dark:border-zinc-800 border-dashed">
                         <Coffee size={48} className="text-zinc-300 mb-4" />
                         <Text className="text-zinc-900 dark:text-white font-bold text-lg text-center">No classes today</Text>
-                        <Text className="text-zinc-500 text-center mt-1">Enjoy your day off or get ahead on your tasks!</Text>
+                        <Text className="text-zinc-500 text-center mt-1">Enjoy your day off!</Text>
                     </View>
                 ) : (
-                    todaysClasses.map((item) => (
-                        <SubjectCard
-                            key={item.id}
-                            subject={item.subject_name}
-                            teacher={item.teacher}
-                            room={item.location}
-                            time={`${item.start_time} - ${item.end_time}`}
-                            color={item.subject_color}
-                            attendance={getPercentage(item.subject_id)}
-                            status={attendanceLog[item.subject_id]} // Pass current status
-                            onMark={(status: any) => handleMarkAttendance(item.subject_id, status)}
-                        />
-                    ))
+                    todaysClasses.map((item, index) => {
+                        // Get attendance status for this specific class instance
+                        const logKey = item.is_extra ? `extra_${item.id}` : `timetable_${item.id}`;
+                        const classStatus = attendanceLog[logKey];
+
+                        return (
+                            <SubjectCard
+                                key={`${item.id}-${index}`} // Composite key just in case
+                                subject={item.subject_name}
+                                teacher={item.teacher}
+                                room={item.location}
+                                time={`${item.start_time} - ${item.end_time}`}
+                                color={item.subject_color}
+                                attendance={getPercentage(item.subject_id)}
+                                status={classStatus}
+                                onMark={(status: any) => handleMarkAttendance(
+                                    item.subject_id,
+                                    status,
+                                    item.is_extra ? null : item.id,
+                                    item.is_extra ? item.id : null
+                                )}
+                                isExtra={!!item.is_extra} // Pass extra flag as boolean
+                            />
+                        );
+                    })
                 )}
 
             </ScrollView>
+
+            {/* --- EXTRA CLASS MODAL --- */}
+            <Modal visible={isExtraModalOpen} animationType="slide" presentationStyle="pageSheet">
+                <View className="flex-1 bg-zinc-50 dark:bg-zinc-950 p-6">
+                    <View className="flex-row justify-between items-center mb-8">
+                        <Text className="text-xl font-bold text-zinc-900 dark:text-white">Add Extra Class</Text>
+                        <TouchableOpacity onPress={() => setIsExtraModalOpen(false)}>
+                            <Text className="text-indigo-600 font-bold">Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Subject Selector */}
+                    <View className="mb-6">
+                        <Text className="text-zinc-500 font-medium mb-2">Subject</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-2">
+                            {subjects.map(sub => (
+                                <TouchableOpacity
+                                    key={sub.id}
+                                    onPress={() => setSelectedSubjectId(sub.id)}
+                                    className={`mr-3 p-3 rounded-xl border ${selectedSubjectId === sub.id ? 'bg-indigo-50 border-indigo-500' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'}`}
+                                >
+                                    <View className="flex-row items-center gap-2">
+                                        <View style={{ backgroundColor: sub.color }} className="w-3 h-3 rounded-full" />
+                                        <Text className={`font-bold ${selectedSubjectId === sub.id ? 'text-indigo-700' : 'text-zinc-700 dark:text-zinc-300'}`}>{sub.name}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+
+                    {/* Time Pickers */}
+                    <View className="flex-row gap-4 mb-6">
+                        <View className="flex-1">
+                            <Text className="text-zinc-500 font-medium mb-2">Start Time</Text>
+                            <TouchableOpacity onPress={() => setShowStartPicker(true)} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                                <Text className="text-zinc-900 dark:text-white font-bold text-center">{formatTime(extraStartTime)}</Text>
+                            </TouchableOpacity>
+                            {showStartPicker && (
+                                <DateTimePicker
+                                    value={extraStartTime}
+                                    mode="time"
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    onChange={(event, date) => {
+                                        setShowStartPicker(false);
+                                        if (date) setExtraStartTime(date);
+                                    }}
+                                />
+                            )}
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-zinc-500 font-medium mb-2">End Time</Text>
+                            <TouchableOpacity onPress={() => setShowEndPicker(true)} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                                <Text className="text-zinc-900 dark:text-white font-bold text-center">{formatTime(extraEndTime)}</Text>
+                            </TouchableOpacity>
+                            {showEndPicker && (
+                                <DateTimePicker
+                                    value={extraEndTime}
+                                    mode="time"
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    onChange={(event, date) => {
+                                        setShowEndPicker(false);
+                                        if (date) setExtraEndTime(date);
+                                    }}
+                                />
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Location */}
+                    <View className="mb-8">
+                        <Text className="text-zinc-500 font-medium mb-2">Location (Optional)</Text>
+                        <TextInput
+                            placeholder="e.g. Room 304" placeholderTextColor="#A1A1AA"
+                            value={extraLocation}
+                            onChangeText={setExtraLocation}
+                            className="bg-white dark:bg-zinc-900 p-4 rounded-2xl text-lg text-zinc-900 dark:text-white border border-zinc-100 dark:border-zinc-800"
+                        />
+                    </View>
+
+                    <TouchableOpacity onPress={saveExtraClass} className="bg-indigo-600 p-4 rounded-2xl items-center shadow-lg shadow-indigo-500/30">
+                        <Text className="text-white font-bold text-lg">Add to Today's Schedule</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+
         </ScreenWrapper>
     );
 }
 
-// Updated "Cool AF" Tinted Card
-const SubjectCard = ({ subject, teacher, room, time, color, attendance, status, onMark }: any) => {
-    // Spinner Color Logic
+// Updated Subject Card with "Extra" Badge support
+const SubjectCard = ({ subject, teacher, room, time, color, attendance, status, onMark, isExtra }: any) => {
     let spinnerColor = 'text-green-500';
     if (attendance < 75) spinnerColor = 'text-orange-500';
     if (attendance < 60) spinnerColor = 'text-red-500';
@@ -167,74 +325,45 @@ const SubjectCard = ({ subject, teacher, room, time, color, attendance, status, 
     return (
         <View
             style={{
-                backgroundColor: `${color}20`, // 12% Opacity Background
-                borderColor: `${color}40`,     // 25% Opacity Border
+                backgroundColor: `${color}20`,
+                borderColor: `${color}40`,
             }}
             className="rounded-3xl p-5 mb-4 border"
         >
             <View className="flex-row justify-between">
                 <View>
-                    {/* Header with Clock Icon */}
                     <View className="flex-row items-center mb-1">
                         <Clock size={14} color={color} style={{ marginRight: 6 }} />
-                        <Text
-                            style={{ color: color }}
-                            className="text-xs font-bold uppercase tracking-wider"
-                        >
-                            {time}
-                        </Text>
+                        <Text style={{ color: color }} className="text-xs font-bold uppercase tracking-wider">{time}</Text>
+
+                        {/* EXTRA BADGE */}
+                        {isExtra && (
+                            <View className="ml-2 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-md">
+                                <Text className="text-[10px] font-bold text-indigo-600 dark:text-indigo-300">EXTRA</Text>
+                            </View>
+                        )}
                     </View>
 
                     <Text className="text-xl font-bold text-zinc-900 dark:text-white mb-1">{subject}</Text>
                     <Text className="text-zinc-500 text-sm mb-4">{teacher || 'No Teacher'} • {room || 'No Room'}</Text>
                 </View>
 
-                {/* Dynamic Spinner */}
                 <AttendanceSpinner percentage={attendance} radius={26} strokeWidth={4} />
             </View>
 
-            {/* Divider (Tinted) */}
             <View style={{ backgroundColor: `${color}30` }} className="h-[1px] w-full my-3" />
 
-            {/* Attendance Buttons */}
             <View className="flex-row justify-between px-2">
-                <TouchableOpacity
-                    onPress={() => onMark('present')}
-                    className={`items-center justify-center w-10 h-10 rounded-full transition-opacity 
-                        ${status === 'present' ? 'bg-green-500' : 'bg-white/50 dark:bg-black/20'}
-                        ${status && status !== 'present' ? 'opacity-30' : 'opacity-100'} 
-                    `}
-                >
+                <TouchableOpacity onPress={() => onMark('present')} className={`items-center justify-center w-10 h-10 rounded-full transition-opacity ${status === 'present' ? 'bg-green-500' : 'bg-white/50 dark:bg-black/20'} ${status && status !== 'present' ? 'opacity-30' : 'opacity-100'}`}>
                     <Check size={20} color={status === 'present' ? 'white' : '#10B981'} />
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => onMark('absent')}
-                    className={`items-center justify-center w-10 h-10 rounded-full transition-opacity
-                        ${status === 'absent' ? 'bg-red-500' : 'bg-white/50 dark:bg-black/20'}
-                        ${status && status !== 'absent' ? 'opacity-30' : 'opacity-100'}
-                    `}
-                >
+                <TouchableOpacity onPress={() => onMark('absent')} className={`items-center justify-center w-10 h-10 rounded-full transition-opacity ${status === 'absent' ? 'bg-red-500' : 'bg-white/50 dark:bg-black/20'} ${status && status !== 'absent' ? 'opacity-30' : 'opacity-100'}`}>
                     <X size={20} color={status === 'absent' ? 'white' : '#EF4444'} />
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => onMark('cancelled')}
-                    className={`items-center justify-center w-10 h-10 rounded-full transition-opacity
-                        ${status === 'cancelled' ? 'bg-yellow-500' : 'bg-white/50 dark:bg-black/20'}
-                        ${status && status !== 'cancelled' ? 'opacity-30' : 'opacity-100'}
-                    `}
-                >
+                <TouchableOpacity onPress={() => onMark('cancelled')} className={`items-center justify-center w-10 h-10 rounded-full transition-opacity ${status === 'cancelled' ? 'bg-yellow-500' : 'bg-white/50 dark:bg-black/20'} ${status && status !== 'cancelled' ? 'opacity-30' : 'opacity-100'}`}>
                     <Ban size={20} color={status === 'cancelled' ? 'white' : '#F59E0B'} />
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => onMark('holiday')}
-                    className={`items-center justify-center w-10 h-10 rounded-full transition-opacity
-                        ${status === 'holiday' ? 'bg-orange-500' : 'bg-white/50 dark:bg-black/20'}
-                        ${status && status !== 'holiday' ? 'opacity-30' : 'opacity-100'}
-                    `}
-                >
+                <TouchableOpacity onPress={() => onMark('holiday')} className={`items-center justify-center w-10 h-10 rounded-full transition-opacity ${status === 'holiday' ? 'bg-orange-500' : 'bg-white/50 dark:bg-black/20'} ${status && status !== 'holiday' ? 'opacity-30' : 'opacity-100'}`}>
                     <Umbrella size={20} color={status === 'holiday' ? 'white' : '#F97316'} />
                 </TouchableOpacity>
             </View>

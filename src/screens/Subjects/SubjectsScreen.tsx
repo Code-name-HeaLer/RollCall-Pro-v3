@@ -84,7 +84,7 @@ export default function SubjectsScreen({ navigation }: any) {
                                     borderRadius={24}
                                     strokeWidth={2}
                                     dashArray="6 4"
-                                    style={{ width: '48%', height: 112, marginBottom: 12 }} // h-28 ~ 112
+                                    style={{ width: '48%', height: 106, marginBottom: 12 }} // h-28 ~ 112
                                 >
                                     {/* Make inner content transparent so the SVG border remains visible */}
                                     <TouchableOpacity
@@ -113,12 +113,9 @@ export default function SubjectsScreen({ navigation }: any) {
                                     borderColor: `${item.color}40`,
                                 }}
                                 // Changed h-28 to h-32 for better spacing
-                                className="w-[48%] h-32 rounded-3xl p-3 mb-3 border relative"
+                                className="w-[48%] h-[106px] rounded-3xl p-3 mb-3 border relative"
                             >
-                                {/* Top Right: Edit Icon (Absolute) */}
-                                <View className="absolute top-3 right-3 z-10 bg-white/40 dark:bg-black/10 p-1.5 rounded-full">
-                                    <Pencil size={12} color={item.color} />
-                                </View>
+
 
                                 {/* Main Content Row */}
                                 <View className="flex-row items-center justify-between h-full pt-2">
@@ -133,14 +130,17 @@ export default function SubjectsScreen({ navigation }: any) {
                                         </Text>
 
                                         <Text
-                                            className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide mb-2"
+                                            className="text-[10px] text-zinc-500 tracking-wide mb-2"
                                             numberOfLines={1}
                                         >
                                             {item.teacher || 'No Teacher'}
                                         </Text>
 
                                         {/* Stats Badge: 5/7 */}
-                                        <View className="self-start bg-white/60 dark:bg-black/20 px-2 py-1 rounded-lg">
+                                        <View className="self-start px-2 py-1 rounded-lg"
+                                            style={{
+                                                backgroundColor: `${item.color}30`
+                                            }}>
                                             <Text className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
                                                 {item.attended_classes} <Text className="text-zinc-400 font-normal">/</Text> {item.total_classes}
                                             </Text>

@@ -44,8 +44,24 @@ export const initDB = async () => {
           subject_id INTEGER NOT NULL,
           date TEXT NOT NULL, -- ISO Date String (YYYY-MM-DD)
           status TEXT NOT NULL, -- 'present', 'absent', 'cancelled', 'holiday'
-          FOREIGN KEY (subject_id) REFERENCES subjects (id)
+          timetable_id INTEGER, -- NULL for extra classes, set for regular timetable classes
+          extra_class_id INTEGER, -- NULL for regular classes, set for extra classes
+          FOREIGN KEY (subject_id) REFERENCES subjects (id),
+          FOREIGN KEY (timetable_id) REFERENCES timetable (id),
+          FOREIGN KEY (extra_class_id) REFERENCES extra_classes (id)
         );`);
+
+        // Migration: Add columns if they don't exist (for existing databases)
+        try {
+            await txn.execAsync(`ALTER TABLE attendance ADD COLUMN timetable_id INTEGER;`);
+        } catch (e) {
+            // Column already exists, ignore
+        }
+        try {
+            await txn.execAsync(`ALTER TABLE attendance ADD COLUMN extra_class_id INTEGER;`);
+        } catch (e) {
+            // Column already exists, ignore
+        }
 
         await txn.execAsync(`CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +72,16 @@ export const initDB = async () => {
           is_completed INTEGER DEFAULT 0, -- 0 = false, 1 = true
           FOREIGN KEY (subject_id) REFERENCES subjects (id)
         );`);
+
+        await txn.execAsync(`CREATE TABLE IF NOT EXISTS extra_classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject_id INTEGER NOT NULL,
+            date TEXT NOT NULL, -- YYYY-MM-DD
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT,
+            FOREIGN KEY (subject_id) REFERENCES subjects (id)
+          );`);
     });
 };
 
@@ -140,6 +166,8 @@ export interface TimetableItem {
     subject_name?: string;
     subject_color?: string;
     teacher?: string;
+    // 1 = extra class, undefined/0 = regular
+    is_extra?: number;
 }
 
 // 1. Add to Schedule
@@ -185,21 +213,40 @@ export interface AttendanceRecord {
     subject_id: number;
     date: string;
     status: 'present' | 'absent' | 'cancelled' | 'holiday';
+    timetable_id?: number | null; // NULL for extra classes
+    extra_class_id?: number | null; // NULL for regular classes
 }
 
-// 1. Mark Attendance (Insert or Update)
+// 1. Mark Attendance (Insert or Update) - Now tracks per class instance
 export const markAttendance = async (
     subjectId: number,
     date: string,
-    status: 'present' | 'absent' | 'cancelled' | 'holiday'
+    status: 'present' | 'absent' | 'cancelled' | 'holiday',
+    timetableId?: number | null,
+    extraClassId?: number | null
 ): Promise<void> => {
     const db = await getDatabase();
 
-    // A. Check if record exists for this day/subject
-    const existing = await db.getFirstAsync<{ id: number }>(
-        'SELECT id FROM attendance WHERE subject_id = ? AND date = ?',
-        [subjectId, date]
-    );
+    // A. Check if record exists for this class instance
+    let existing: { id: number } | null = null;
+
+    if (timetableId) {
+        existing = await db.getFirstAsync<{ id: number }>(
+            'SELECT id FROM attendance WHERE timetable_id = ? AND date = ?',
+            [timetableId, date]
+        );
+    } else if (extraClassId) {
+        existing = await db.getFirstAsync<{ id: number }>(
+            'SELECT id FROM attendance WHERE extra_class_id = ? AND date = ?',
+            [extraClassId, date]
+        );
+    } else {
+        // Fallback: if no class instance ID provided, use old behavior (subject + date)
+        existing = await db.getFirstAsync<{ id: number }>(
+            'SELECT id FROM attendance WHERE subject_id = ? AND date = ? AND timetable_id IS NULL AND extra_class_id IS NULL',
+            [subjectId, date]
+        );
+    }
 
     if (existing) {
         // Update existing
@@ -210,8 +257,8 @@ export const markAttendance = async (
     } else {
         // Insert new
         await db.runAsync(
-            'INSERT INTO attendance (subject_id, date, status) VALUES (?, ?, ?)',
-            [subjectId, date, status]
+            'INSERT INTO attendance (subject_id, date, status, timetable_id, extra_class_id) VALUES (?, ?, ?, ?, ?)',
+            [subjectId, date, status, timetableId || null, extraClassId || null]
         );
     }
 
@@ -273,5 +320,36 @@ export const updateSubject = async (
     await db.runAsync(
         'UPDATE subjects SET name = ?, teacher = ?, color = ? WHERE id = ?',
         [name, teacher, color, id]
+    );
+};
+
+// --- EXTRA CLASSES OPERATIONS ---
+
+export const addExtraClass = async (
+    subjectId: number,
+    date: string,
+    startTime: string,
+    endTime: string,
+    location: string
+): Promise<void> => {
+    const db = await getDatabase();
+    await db.runAsync(
+        'INSERT INTO extra_classes (subject_id, date, start_time, end_time, location) VALUES (?, ?, ?, ?, ?)',
+        [subjectId, date, startTime, endTime, location]
+    );
+};
+
+export const getExtraClassesForDate = async (date: string): Promise<TimetableItem[]> => {
+    const db = await getDatabase();
+    // We manually map 'date' to 'day_index' just to match the TimetableItem interface type
+    return await db.getAllAsync<TimetableItem>(
+        `SELECT e.id, e.subject_id, e.start_time, e.end_time, e.location, 
+              s.name as subject_name, s.color as subject_color, s.teacher,
+              1 as is_extra -- Flag to identify extra classes
+       FROM extra_classes e 
+       JOIN subjects s ON e.subject_id = s.id 
+       WHERE e.date = ? 
+       ORDER BY e.start_time ASC`,
+        [date]
     );
 };
