@@ -4,7 +4,11 @@ import { useColorScheme } from 'nativewind';
 import { X, Calendar as CalendarIcon, Link } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function AddTaskScreen({ navigation }: any) {
+interface AddTaskModalContentProps {
+    onClose: () => void;
+}
+
+export default function AddTaskModalContent({ onClose }: AddTaskModalContentProps) {
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
     
@@ -23,7 +27,7 @@ export default function AddTaskScreen({ navigation }: any) {
             <View className="flex-row justify-between items-center mb-8">
                 <Text style={{ color: textColor }} className="text-2xl font-bold">New Task</Text>
                 <TouchableOpacity 
-                    onPress={() => navigation.goBack()} 
+                    onPress={onClose} 
                     style={{ backgroundColor: iconBgColor }}
                     className="p-2 rounded-full"
                 >
@@ -109,3 +113,4 @@ export default function AddTaskScreen({ navigation }: any) {
         </SafeAreaView>
     );
 }
+

@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { checkUserExists } from '../db/db'; // Import helper
 
 import OnboardingScreen from '../screens/Onboarding/OnboardingScreen';
 import TabNavigator from './TabNavigator';
 import AddSubjectScreen from '../screens/Subjects/AddSubjectScreen';
-import TimetableScreen from '../screens/Subjects/TimetableScreen';
-import AddTaskScreen from '../screens/Tasks/AddTaskScreen';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
+    const { colorScheme } = useColorScheme();
     const [isLoading, setIsLoading] = useState(true);
     const [initialRoute, setInitialRoute] = useState('Onboarding');
+    
+    // Dynamic background color for modals (only AddSubject now uses React Navigation modal)
+    const modalBgColor = colorScheme === 'dark' ? '#09090b' : '#f8fafc';
 
     useEffect(() => {
         checkUserExists()
@@ -43,17 +46,15 @@ export default function AppNavigator() {
             <Stack.Screen
                 name="AddSubject"
                 component={AddSubjectScreen}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen
-                name="Timetable"
-                component={TimetableScreen}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen
-                name="AddTask"
-                component={AddTaskScreen}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                options={({ route }) => ({ 
+                    presentation: 'modal', 
+                    animation: 'slide_from_bottom',
+                    animationTypeForReplace: 'push',
+                    gestureEnabled: true,
+                    gestureDirection: 'vertical',
+                    fullScreenGestureEnabled: true,
+                    contentStyle: { backgroundColor: modalBgColor }
+                })}
             />
         </Stack.Navigator>
     );

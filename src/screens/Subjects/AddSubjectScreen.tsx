@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'reac
 import { X, Check, Trash2, Save } from 'lucide-react-native';
 import { addSubject, updateSubject, deleteSubject, Subject } from '../../db/db';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 
 const COLORS = ['#F43F5E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
 
@@ -10,6 +11,9 @@ export default function AddSubjectScreen({ navigation, route }: any) {
     // Check if we are editing
     const subjectToEdit: Subject | undefined = route.params?.subject;
     const isEditing = !!subjectToEdit;
+
+    const { colorScheme } = useColorScheme();
+    const bgColor = colorScheme === 'dark' ? '#09090b' : '#f8fafc';
 
     // Form State
     const [mode, setMode] = useState<'new' | 'mid'>('new');
@@ -93,7 +97,7 @@ export default function AddSubjectScreen({ navigation, route }: any) {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
 
             {/* 2. ADDED: Inner View for padding (keeps content neat) */}
             <View className="flex-1 px-6 pt-4">
@@ -112,18 +116,20 @@ export default function AddSubjectScreen({ navigation, route }: any) {
 
                     {/* Toggle Mode (Only show when CREATING new subject) */}
                     {!isEditing && (
-                        <View className="flex-row bg-zinc-200 dark:bg-zinc-800 p-1 rounded-xl mb-8">
+                        <View style={{ backgroundColor: colorScheme === 'dark' ? '#27272a' : '#e4e4e7' }} className="flex-row p-1 rounded-xl mb-8">
                             <TouchableOpacity
                                 onPress={() => setMode('new')}
-                                className={`flex-1 py-3 items-center rounded-lg ${mode === 'new' ? 'bg-white dark:bg-zinc-700 shadow-sm' : ''}`}
+                                style={{ backgroundColor: mode === 'new' ? (colorScheme === 'dark' ? '#3f3f46' : '#ffffff') : 'transparent' }}
+                                className={`flex-1 py-3 items-center rounded-lg ${mode === 'new' ? 'shadow-sm' : ''}`}
                             >
-                                <Text className={`font-bold ${mode === 'new' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>New Semester</Text>
+                                <Text className={`font-bold ${mode === 'new' ? 'text-zinc-900' : 'text-zinc-500'}`}>New Semester</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setMode('mid')}
-                                className={`flex-1 py-3 items-center rounded-lg ${mode === 'mid' ? 'bg-white dark:bg-zinc-700 shadow-sm' : ''}`}
+                                style={{ backgroundColor: mode === 'mid' ? (colorScheme === 'dark' ? '#3f3f46' : '#ffffff') : 'transparent' }}
+                                className={`flex-1 py-3 items-center rounded-lg ${mode === 'mid' ? 'shadow-sm' : ''}`}
                             >
-                                <Text className={`font-bold ${mode === 'mid' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500'}`}>Mid-Sem Start</Text>
+                                <Text className={`font-bold ${mode === 'mid' ? 'text-zinc-900' : 'text-zinc-500'}`}>Mid-Sem Start</Text>
                             </TouchableOpacity>
                         </View>
                     )}

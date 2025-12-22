@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { BarChart } from 'react-native-gifted-charts';
 
 export default function StatsScreen() {
+    const { colorScheme } = useColorScheme();
     // Mock Data for Chart
     const barData = [
         { value: 72, label: 'CS', frontColor: '#F43F5E' },
@@ -39,13 +41,13 @@ export default function StatsScreen() {
 
                 {/* Breakdown Sections */}
                 <View className="flex-row gap-4">
-                    <View className="flex-1 bg-green-50 dark:bg-green-900/10 p-5 rounded-3xl">
+                    <View style={{ backgroundColor: colorScheme === 'dark' ? '#065f46' : '#f0fdf4' }} className="flex-1 p-5 rounded-3xl">
                         <Text className="text-green-600 font-bold mb-1">On Track</Text>
                         <Text className="text-3xl font-bold text-zinc-900 dark:text-white">3</Text>
                         <Text className="text-xs text-zinc-500 mt-1">Subjects above 75%</Text>
                     </View>
 
-                    <View className="flex-1 bg-red-50 dark:bg-red-900/10 p-5 rounded-3xl">
+                    <View style={{ backgroundColor: colorScheme === 'dark' ? '#7c2d12' : '#fef2f2' }} className="flex-1 p-5 rounded-3xl">
                         <Text className="text-red-600 font-bold mb-1">Danger Zone</Text>
                         <Text className="text-3xl font-bold text-zinc-900 dark:text-white">1</Text>
                         <Text className="text-xs text-zinc-500 mt-1">Needs attention</Text>

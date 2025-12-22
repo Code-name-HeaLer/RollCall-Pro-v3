@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -42,10 +42,29 @@ export default function App() {
     );
   }
 
+  // Custom theme to prevent white flash during modal transitions
+  const navigationTheme = colorScheme === 'dark' 
+    ? {
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          background: '#09090b', // zinc-950
+          card: '#09090b', // zinc-950
+        },
+      }
+    : {
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          background: '#f8fafc', // zinc-50
+          card: '#f8fafc', // zinc-50
+        },
+      };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <NavigationContainer>
+      <SafeAreaProvider style={{ backgroundColor: colorScheme === 'dark' ? '#09090b' : '#f8fafc' }}>
+        <NavigationContainer theme={navigationTheme}>
           {/* DYNAMIC STATUS BAR */}
           <StatusBar
             // If Dark Mode -> Text is White ('light'). If Light Mode -> Text is Black ('dark')

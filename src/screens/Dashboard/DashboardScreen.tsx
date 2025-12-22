@@ -308,7 +308,7 @@ export default function DashboardScreen() {
 
             {/* --- EXTRA CLASS MODAL --- */}
             <Modal visible={isExtraModalOpen} animationType="slide" presentationStyle="pageSheet">
-                <View className="flex-1 bg-zinc-50 dark:bg-zinc-950 p-6">
+                <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#09090b' : '#f8fafc' }} className="p-6">
                     <View className="flex-row justify-between items-center mb-8">
                         <Text className="text-xl font-bold text-zinc-900 dark:text-white">Add Extra Class</Text>
                         <TouchableOpacity onPress={() => setIsExtraModalOpen(false)}>

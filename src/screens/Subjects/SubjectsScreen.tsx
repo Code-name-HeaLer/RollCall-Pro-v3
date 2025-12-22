@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Modal } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from 'nativewind';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
@@ -8,10 +8,12 @@ import { getSubjects, Subject } from '../../db/db'; // Import helpers
 
 import AttendanceSpinner from '../../components/ui/AttendanceSpinner';
 import DashedRoundedCard from '../../components/ui/DashedRoundedCard';
+import TimetableModalContent from './TimetableModalContent';
 
 export default function SubjectsScreen({ navigation }: any) {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isTimetableModalOpen, setIsTimetableModalOpen] = useState(false);
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
 
@@ -51,7 +53,7 @@ export default function SubjectsScreen({ navigation }: any) {
             <View className="flex-row justify-between items-center mb-6 mt-2">
                 <Text className="text-3xl font-bold text-zinc-900 dark:text-white">Subjects</Text>
                 <TouchableOpacity
-                    onPress={() => navigation.navigate('Timetable')}
+                    onPress={() => setIsTimetableModalOpen(true)}
                     className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full"
                 >
                     <CalendarIcon size={22} className="text-zinc-900 dark:text-white" />
@@ -159,6 +161,11 @@ export default function SubjectsScreen({ navigation }: any) {
                     }}
                 />
             )}
+
+            {/* Timetable Modal */}
+            <Modal visible={isTimetableModalOpen} animationType="slide" presentationStyle="pageSheet">
+                <TimetableModalContent onClose={() => setIsTimetableModalOpen(false)} />
+            </Modal>
         </ScreenWrapper>
     );
 }

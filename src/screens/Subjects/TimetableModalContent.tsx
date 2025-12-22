@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, FlatList, Alert, Platform } from 'react-native';
-import { X, Plus, MapPin, Clock, Trash2, Check } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Ensure this is installed
+import { X, Plus, MapPin, Clock, Trash2 } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { getSubjects, Subject, addScheduleItem, getScheduleForDay, TimetableItem, deleteScheduleItem } from '../../db/db';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function TimetableScreen({ navigation }: any) {
+interface TimetableModalContentProps {
+    onClose: () => void;
+}
+
+export default function TimetableModalContent({ onClose }: TimetableModalContentProps) {
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
     const bgColor = isDark ? '#09090b' : '#f8fafc';
@@ -86,15 +90,13 @@ export default function TimetableScreen({ navigation }: any) {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
-
-            {/* 2. ADDED: Inner View for padding (keeps content neat) */}
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'left', 'right']}>
             <View className="flex-1 px-6 pt-4">
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-6">
                     <Text style={{ color: textColor }} className="text-2xl font-bold">Manage Schedule</Text>
                     <TouchableOpacity 
-                        onPress={() => navigation.goBack()} 
+                        onPress={onClose} 
                         style={{ backgroundColor: iconBgColor }}
                         className="p-2 rounded-full"
                     >
@@ -123,7 +125,7 @@ export default function TimetableScreen({ navigation }: any) {
                     keyExtractor={(item) => item.id.toString()}
                     ListEmptyComponent={
                         <View className="mt-10 items-center">
-                            <Text className="text-zinc-400">No classes scheduled for {DAYS[selectedDay]}.</Text>
+                            <Text style={{ color: secondaryTextColor }}>No classes scheduled for {DAYS[selectedDay]}.</Text>
                         </View>
                     }
                     renderItem={({ item }) => (
@@ -131,18 +133,18 @@ export default function TimetableScreen({ navigation }: any) {
                             <View>
                                 <Text className="text-lg font-bold text-zinc-900 dark:text-white">{item.subject_name}</Text>
                                 <View className="flex-row items-center mt-1">
-                                    <Clock size={14} className="text-zinc-400 mr-1" />
-                                    <Text className="text-zinc-500 text-xs mr-3">{item.start_time} - {item.end_time}</Text>
+                                    <Clock size={14} color={secondaryTextColor} />
+                                    <Text style={{ color: secondaryTextColor }} className="text-xs mr-3 ml-1">{item.start_time} - {item.end_time}</Text>
                                     {item.location ? (
                                         <>
-                                            <MapPin size={14} className="text-zinc-400 mr-1" />
-                                            <Text className="text-zinc-500 text-xs">{item.location}</Text>
+                                            <MapPin size={14} color={secondaryTextColor} style={{ marginLeft: 4 }} />
+                                            <Text style={{ color: secondaryTextColor }} className="text-xs ml-1">{item.location}</Text>
                                         </>
                                     ) : null}
                                 </View>
                             </View>
                             <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-2">
-                                <Trash2 size={18} className="text-red-400" />
+                                <Trash2 size={18} color="#f87171" />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -153,14 +155,14 @@ export default function TimetableScreen({ navigation }: any) {
                     onPress={() => setIsAddModalOpen(true)}
                     className="absolute bottom-8 right-6 w-14 h-14 bg-zinc-900 dark:bg-white rounded-full items-center justify-center shadow-xl"
                 >
-                    <Plus size={24} className="text-white dark:text-zinc-900" />
+                    <Plus size={24} color={isDark ? '#09090b' : '#ffffff'} />
                 </TouchableOpacity>
 
                 {/* --- ADD CLASS MODAL --- */}
                 <Modal visible={isAddModalOpen} animationType="slide" presentationStyle="pageSheet">
                     <View style={{ flex: 1, backgroundColor: bgColor }} className="p-6">
                         <View className="flex-row justify-between items-center mb-8">
-                            <Text className="text-xl font-bold text-zinc-900 dark:text-white">Add Class to {DAYS[selectedDay]}</Text>
+                            <Text style={{ color: textColor }} className="text-xl font-bold">Add Class to {DAYS[selectedDay]}</Text>
                             <TouchableOpacity onPress={() => setIsAddModalOpen(false)}>
                                 <Text className="text-indigo-600 font-bold">Cancel</Text>
                             </TouchableOpacity>
@@ -168,7 +170,7 @@ export default function TimetableScreen({ navigation }: any) {
 
                         {/* Subject Selector */}
                         <View className="mb-6">
-                            <Text className="text-zinc-500 font-medium mb-2">Subject</Text>
+                            <Text style={{ color: secondaryTextColor }} className="font-medium mb-2">Subject</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-2">
                                 {subjects.map(sub => (
                                     <TouchableOpacity
@@ -188,9 +190,9 @@ export default function TimetableScreen({ navigation }: any) {
                         {/* Time Pickers */}
                         <View className="flex-row gap-4 mb-6">
                             <View className="flex-1">
-                                <Text className="text-zinc-500 font-medium mb-2">Start Time</Text>
+                                <Text style={{ color: secondaryTextColor }} className="font-medium mb-2">Start Time</Text>
                                 <TouchableOpacity onPress={() => setShowStartPicker(true)} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                                    <Text className="text-zinc-900 dark:text-white font-bold text-center">{formatTime(startTime)}</Text>
+                                    <Text style={{ color: textColor }} className="font-bold text-center">{formatTime(startTime)}</Text>
                                 </TouchableOpacity>
                                 {showStartPicker && (
                                     <DateTimePicker
@@ -205,9 +207,9 @@ export default function TimetableScreen({ navigation }: any) {
                                 )}
                             </View>
                             <View className="flex-1">
-                                <Text className="text-zinc-500 font-medium mb-2">End Time</Text>
+                                <Text style={{ color: secondaryTextColor }} className="font-medium mb-2">End Time</Text>
                                 <TouchableOpacity onPress={() => setShowEndPicker(true)} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                                    <Text className="text-zinc-900 dark:text-white font-bold text-center">{formatTime(endTime)}</Text>
+                                    <Text style={{ color: textColor }} className="font-bold text-center">{formatTime(endTime)}</Text>
                                 </TouchableOpacity>
                                 {showEndPicker && (
                                     <DateTimePicker
@@ -225,12 +227,17 @@ export default function TimetableScreen({ navigation }: any) {
 
                         {/* Location */}
                         <View className="mb-8">
-                            <Text className="text-zinc-500 font-medium mb-2">Location (Optional)</Text>
+                            <Text style={{ color: secondaryTextColor }} className="font-medium mb-2">Location (Optional)</Text>
                             <TextInput
                                 placeholder="e.g. Room 304" placeholderTextColor="#A1A1AA"
                                 value={location}
                                 onChangeText={setLocation}
-                                className="bg-white dark:bg-zinc-900 p-4 rounded-2xl text-lg text-zinc-900 dark:text-white border border-zinc-100 dark:border-zinc-800"
+                                style={{
+                                    backgroundColor: isDark ? '#18181b' : '#ffffff',
+                                    color: textColor,
+                                    borderColor: isDark ? '#27272a' : '#e4e4e7',
+                                }}
+                                className="p-4 rounded-2xl text-lg border"
                             />
                         </View>
 
@@ -239,8 +246,8 @@ export default function TimetableScreen({ navigation }: any) {
                         </TouchableOpacity>
                     </View>
                 </Modal>
-
             </View>
         </SafeAreaView>
     );
 }
+
