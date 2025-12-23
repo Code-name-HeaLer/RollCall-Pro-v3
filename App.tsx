@@ -6,10 +6,21 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
+import * as Notifications from 'expo-notifications';
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDB, getUser } from './src/db/db';
 import './global.css';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
@@ -20,6 +31,12 @@ export default function App() {
     const setup = async () => {
       try {
         await initDB();
+
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Notification permissions not granted');
+        }
+
         const user = await getUser();
         if (user?.theme_pref && user.theme_pref !== 'system') {
           setColorScheme(user.theme_pref as 'light' | 'dark');
@@ -43,23 +60,23 @@ export default function App() {
   }
 
   // Custom theme to prevent white flash during modal transitions
-  const navigationTheme = colorScheme === 'dark' 
+  const navigationTheme = colorScheme === 'dark'
     ? {
-        ...DarkTheme,
-        colors: {
-          ...DarkTheme.colors,
-          background: '#09090b', // zinc-950
-          card: '#09090b', // zinc-950
-        },
-      }
+      ...DarkTheme,
+      colors: {
+        ...DarkTheme.colors,
+        background: '#09090b', // zinc-950
+        card: '#09090b', // zinc-950
+      },
+    }
     : {
-        ...DefaultTheme,
-        colors: {
-          ...DefaultTheme.colors,
-          background: '#f8fafc', // zinc-50
-          card: '#f8fafc', // zinc-50
-        },
-      };
+      ...DefaultTheme,
+      colors: {
+        ...DefaultTheme.colors,
+        background: '#f8fafc', // zinc-50
+        card: '#f8fafc', // zinc-50
+      },
+    };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

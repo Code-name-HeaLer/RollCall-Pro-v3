@@ -353,3 +353,58 @@ export const getExtraClassesForDate = async (date: string): Promise<TimetableIte
         [date]
     );
 };
+
+// ... existing code ...
+
+// --- TASKS OPERATIONS ---
+
+export interface Task {
+    id: number;
+    title: string;
+    description: string;
+    subject_id?: number | null;
+    due_date: string; // ISO String
+    is_completed: number; // 0 or 1
+    // Joins
+    subject_name?: string;
+    subject_color?: string;
+}
+
+// 1. Add Task (Returns the new ID)
+export const addTask = async (
+    title: string,
+    description: string,
+    subjectId: number | null,
+    dueDate: string
+): Promise<number> => {
+    const db = await getDatabase();
+    const result = await db.runAsync(
+        'INSERT INTO tasks (title, description, subject_id, due_date, is_completed) VALUES (?, ?, ?, ?, 0)',
+        [title, description, subjectId, dueDate]
+    );
+    return result.lastInsertRowId;
+};
+
+// 2. Get All Tasks (Sorted by Due Date, with Subject info)
+export const getTasks = async (): Promise<Task[]> => {
+    const db = await getDatabase();
+    return await db.getAllAsync<Task>(
+        `SELECT t.*, s.name as subject_name, s.color as subject_color 
+       FROM tasks t 
+       LEFT JOIN subjects s ON t.subject_id = s.id 
+       ORDER BY t.is_completed ASC, t.due_date ASC`
+    );
+};
+
+// 3. Toggle Complete
+export const toggleTaskStatus = async (id: number, currentStatus: number): Promise<void> => {
+    const db = await getDatabase();
+    const newStatus = currentStatus === 1 ? 0 : 1;
+    await db.runAsync('UPDATE tasks SET is_completed = ? WHERE id = ?', [newStatus, id]);
+};
+
+// 4. Delete Task
+export const deleteTask = async (id: number): Promise<void> => {
+    const db = await getDatabase();
+    await db.runAsync('DELETE FROM tasks WHERE id = ?', [id]);
+};
