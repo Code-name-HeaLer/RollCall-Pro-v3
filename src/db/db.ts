@@ -17,7 +17,8 @@ export const initDB = async () => {
           id INTEGER PRIMARY KEY NOT NULL,
           name TEXT NOT NULL,
           min_attendance INTEGER NOT NULL,
-          theme_pref TEXT DEFAULT 'system'
+          theme_pref TEXT DEFAULT 'system',
+          created_at TEXT -- ISO String of when they onboarded
         );`);
 
         await txn.execAsync(`CREATE TABLE IF NOT EXISTS subjects (
@@ -62,6 +63,13 @@ export const initDB = async () => {
         } catch (e) {
             // Column already exists, ignore
         }
+        try {
+            await txn.execAsync(`ALTER TABLE users ADD COLUMN created_at TEXT;`);
+            const now = new Date().toISOString();
+            await txn.runAsync(`UPDATE users SET created_at = ? WHERE created_at IS NULL`, [now]);
+        } catch (e) {
+            // Column likely exists
+        }
 
         await txn.execAsync(`CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +103,8 @@ export const checkUserExists = async (): Promise<boolean> => {
 // Helper: Create User (Onboarding)
 export const createUser = async (name: string, minAttendance: number): Promise<void> => {
     const db = await getDatabase();
-    await db.runAsync('INSERT INTO users (name, min_attendance) VALUES (?, ?)', [name, minAttendance]);
+    const createdAt = new Date().toISOString();
+    await db.runAsync('INSERT INTO users (name, min_attendance, created_at) VALUES (?, ?, ?)', [name, minAttendance, createdAt]);
 };
 
 // Helper: Get User Profile
@@ -408,3 +417,41 @@ export const deleteTask = async (id: number): Promise<void> => {
     const db = await getDatabase();
     await db.runAsync('DELETE FROM tasks WHERE id = ?', [id]);
 };
+
+// ... existing code ...
+
+// --- CALENDAR OPERATIONS ---
+
+// 1. Get all dates that have attendance marked (for the dots)
+export const getCalendarMarkers = async (): Promise<Record<string, any>> => {
+    const db = await getDatabase();
+
+    // Get all attendance records joined with subject color
+    const results = await db.getAllAsync<{ date: string; color: string; subject_id: number }>(
+        `SELECT a.date, s.color, s.id as subject_id 
+       FROM attendance a 
+       JOIN subjects s ON a.subject_id = s.id`
+    );
+
+    const markers: Record<string, any> = {};
+
+    results.forEach(row => {
+        if (!markers[row.date]) {
+            markers[row.date] = { dots: [] };
+        }
+
+        // Avoid duplicate dots for the same subject on the same day
+        const exists = markers[row.date].dots.find((d: any) => d.key === row.subject_id);
+        if (!exists) {
+            markers[row.date].dots.push({
+                key: row.subject_id,
+                color: row.color,
+            });
+        }
+    });
+
+    return markers;
+};
+
+// Note: We will reuse 'getScheduleForDay', 'getExtraClassesForDate', and 'getAttendanceByDate'
+// in the screen logic to reconstruct the day.
