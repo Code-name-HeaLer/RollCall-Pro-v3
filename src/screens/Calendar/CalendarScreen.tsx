@@ -6,7 +6,6 @@ import { styled, useColorScheme } from 'nativewind';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import { Clock, Check, X, Ban, Umbrella, Coffee, CalendarOff, ArrowRight } from 'lucide-react-native';
 import AttendanceSpinner from '../../components/ui/AttendanceSpinner';
-import PageTransition from '../../components/ui/PageTransition';
 
 import {
     getCalendarMarkers,
@@ -233,49 +232,47 @@ export default function CalendarScreen() {
 
     return (
         <ScreenWrapper>
-            <PageTransition>
-                <View className="mb-6 mt-2">
-                    <StyledText className="text-3xl font-bold text-zinc-900 dark:text-white">History</StyledText>
-                </View>
+            <View className="mb-6 mt-2">
+                <StyledText className="text-3xl font-bold text-zinc-900 dark:text-white">History</StyledText>
+            </View>
 
-                {/* CALENDAR */}
-                <View className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800 mb-6">
-                    <Calendar
-                        onDayPress={onDayPress}
-                        markedDates={markedDates}
-                        markingType={'multi-dot'}
-                        theme={{
-                            backgroundColor: 'transparent',
-                            calendarBackground: 'transparent',
-                            textSectionTitleColor: isDark ? '#A1A1AA' : '#71717A',
-                            selectedDayBackgroundColor: '#4F46E5',
-                            selectedDayTextColor: '#ffffff',
-                            todayTextColor: '#4F46E5',
-                            dayTextColor: isDark ? '#E4E4E7' : '#27272A',
-                            textDisabledColor: isDark ? '#3F3F46' : '#D4D4D8',
-                            dotColor: '#4F46E5',
-                            selectedDotColor: '#ffffff',
-                            arrowColor: '#4F46E5',
-                            monthTextColor: isDark ? '#ffffff' : '#18181B',
-                            textDayFontWeight: '600',
-                            textMonthFontWeight: 'bold',
-                            textDayHeaderFontWeight: '600',
-                        }}
-                    />
-                </View>
+            {/* CALENDAR */}
+            <View className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-800 mb-6">
+                <Calendar
+                    onDayPress={onDayPress}
+                    markedDates={markedDates}
+                    markingType={'multi-dot'}
+                    theme={{
+                        backgroundColor: 'transparent',
+                        calendarBackground: 'transparent',
+                        textSectionTitleColor: isDark ? '#A1A1AA' : '#71717A',
+                        selectedDayBackgroundColor: '#4F46E5',
+                        selectedDayTextColor: '#ffffff',
+                        todayTextColor: '#4F46E5',
+                        dayTextColor: isDark ? '#E4E4E7' : '#27272A',
+                        textDisabledColor: isDark ? '#3F3F46' : '#D4D4D8',
+                        dotColor: '#4F46E5',
+                        selectedDotColor: '#ffffff',
+                        arrowColor: '#4F46E5',
+                        monthTextColor: isDark ? '#ffffff' : '#18181B',
+                        textDayFontWeight: '600',
+                        textMonthFontWeight: 'bold',
+                        textDayHeaderFontWeight: '600',
+                    }}
+                />
+            </View>
 
-                {/* SELECTED DATE HEADER */}
-                <View className="mb-4">
-                    <StyledText className="text-xl font-bold text-zinc-900 dark:text-white">
-                        {new Date(selectedDate + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                    </StyledText>
-                </View>
+            {/* SELECTED DATE HEADER */}
+            <View className="mb-4">
+                <StyledText className="text-xl font-bold text-zinc-900 dark:text-white">
+                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                </StyledText>
+            </View>
 
-                {/* CLASS LIST */}
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                    {renderContent()}
-                </ScrollView>
-            </PageTransition>
+            {/* CLASS LIST */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                {renderContent()}
+            </ScrollView>
         </ScreenWrapper>
     );
 }
