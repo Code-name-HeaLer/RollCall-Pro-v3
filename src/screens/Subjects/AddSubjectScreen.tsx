@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { X, Check, Trash2, Save } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { X, Check, Trash2, Save, AlertTriangle } from 'lucide-react-native';
 import { addSubject, updateSubject, deleteSubject, Subject } from '../../db/db';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
+import { useColorScheme, styled } from 'nativewind';
 
 const COLORS = ['#F43F5E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
+
+// Create Styled Component for reliable Dark Mode text
+const StyledText = styled(Text);
+const StyledTextInput = styled(TextInput);
 
 export default function AddSubjectScreen({ navigation, route }: any) {
     // Check if we are editing
@@ -21,11 +25,14 @@ export default function AddSubjectScreen({ navigation, route }: any) {
     const [name, setName] = useState('');
     const [teacher, setTeacher] = useState('');
 
-    // Mid-Sem fields (Only for creating)
+    // Mid-Sem fields
     const [classesDone, setClassesDone] = useState('');
     const [classesAttended, setClassesAttended] = useState('');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // MODAL STATE
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // Pre-fill data if editing
     useEffect(() => {
@@ -46,11 +53,8 @@ export default function AddSubjectScreen({ navigation, route }: any) {
 
         try {
             if (isEditing && subjectToEdit) {
-                // --- UPDATE MODE ---
                 await updateSubject(subjectToEdit.id, name, teacher, selectedColor);
             } else {
-                // --- CREATE MODE ---
-                // Validate Mid-Sem logic
                 if (mode === 'mid') {
                     const total = parseInt(classesDone) || 0;
                     const attended = parseInt(classesAttended) || 0;
@@ -76,37 +80,34 @@ export default function AddSubjectScreen({ navigation, route }: any) {
         }
     };
 
-    const handleDelete = () => {
+    // 1. Open the Modal
+    const onDeletePress = () => {
         if (!subjectToEdit) return;
+        setIsDeleteModalOpen(true);
+    };
 
-        Alert.alert(
-            "Delete Subject",
-            "Are you sure? This will delete all attendance history for this subject.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteSubject(subjectToEdit.id);
-                        navigation.goBack();
-                    }
-                }
-            ]
-        );
+    // 2. Actually Delete (Called from Modal)
+    const confirmDelete = async () => {
+        if (!subjectToEdit) return;
+        try {
+            await deleteSubject(subjectToEdit.id);
+            setIsDeleteModalOpen(false);
+            navigation.goBack();
+        } catch (e) {
+            Alert.alert("Error", "Could not delete subject");
+        }
     };
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
 
-            {/* 2. ADDED: Inner View for padding (keeps content neat) */}
             <View className="flex-1 px-6 pt-4">
 
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-8">
-                    <Text className="text-2xl font-bold text-zinc-900 dark:text-white">
+                    <StyledText className="text-2xl font-bold text-zinc-900 dark:text-white">
                         {isEditing ? 'Edit Subject' : 'New Subject'}
-                    </Text>
+                    </StyledText>
                     <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 bg-zinc-200 dark:bg-zinc-800 rounded-full">
                         <X size={20} className="text-zinc-600 dark:text-zinc-400" />
                     </TouchableOpacity>
@@ -114,7 +115,7 @@ export default function AddSubjectScreen({ navigation, route }: any) {
 
                 <ScrollView showsVerticalScrollIndicator={false}>
 
-                    {/* Toggle Mode (Only show when CREATING new subject) */}
+                    {/* Toggle Mode */}
                     {!isEditing && (
                         <View style={{ backgroundColor: colorScheme === 'dark' ? '#27272a' : '#e4e4e7' }} className="flex-row p-1 rounded-xl mb-8">
                             <TouchableOpacity
@@ -122,14 +123,14 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                                 style={{ backgroundColor: mode === 'new' ? (colorScheme === 'dark' ? '#3f3f46' : '#ffffff') : 'transparent' }}
                                 className={`flex-1 py-3 items-center rounded-lg ${mode === 'new' ? 'shadow-sm' : ''}`}
                             >
-                                <Text className={`font-bold ${mode === 'new' ? 'text-zinc-900' : 'text-zinc-500'}`}>New Semester</Text>
+                                <StyledText className={`font-bold ${mode === 'new' ? 'text-zinc-900' : 'text-zinc-500'}`}>New Semester</StyledText>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setMode('mid')}
                                 style={{ backgroundColor: mode === 'mid' ? (colorScheme === 'dark' ? '#3f3f46' : '#ffffff') : 'transparent' }}
                                 className={`flex-1 py-3 items-center rounded-lg ${mode === 'mid' ? 'shadow-sm' : ''}`}
                             >
-                                <Text className={`font-bold ${mode === 'mid' ? 'text-zinc-900' : 'text-zinc-500'}`}>Mid-Sem Start</Text>
+                                <StyledText className={`font-bold ${mode === 'mid' ? 'text-zinc-900' : 'text-zinc-500'}`}>Mid-Sem Start</StyledText>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -137,8 +138,8 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                     {/* Form Fields */}
                     <View className="space-y-6">
                         <View>
-                            <Text className="text-zinc-500 font-medium mb-2 ml-1">Subject Name</Text>
-                            <TextInput
+                            <StyledText className="text-zinc-500 font-medium mb-2 ml-1">Subject Name</StyledText>
+                            <StyledTextInput
                                 placeholder="e.g. Data Structures"
                                 placeholderTextColor="#A1A1AA"
                                 value={name}
@@ -148,8 +149,8 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                         </View>
 
                         <View>
-                            <Text className="text-zinc-500 font-medium mb-2 ml-1">Teacher (Optional)</Text>
-                            <TextInput
+                            <StyledText className="text-zinc-500 font-medium mb-2 ml-1">Teacher (Optional)</StyledText>
+                            <StyledTextInput
                                 placeholder="e.g. Dr. Roberts"
                                 placeholderTextColor="#A1A1AA"
                                 value={teacher}
@@ -158,12 +159,12 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                             />
                         </View>
 
-                        {/* Mid Sem Fields (Only when Creating + Mid Mode) */}
+                        {/* Mid Sem Fields */}
                         {!isEditing && mode === 'mid' && (
                             <View className="flex-row gap-4">
                                 <View className="flex-1">
-                                    <Text className="text-zinc-500 font-medium mb-2 ml-1">Classes Done</Text>
-                                    <TextInput
+                                    <StyledText className="text-zinc-500 font-medium mb-2 ml-1">Classes Done</StyledText>
+                                    <StyledTextInput
                                         placeholder="0"
                                         keyboardType="number-pad"
                                         placeholderTextColor="#A1A1AA"
@@ -173,8 +174,8 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                                     />
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="text-zinc-500 font-medium mb-2 ml-1">Attended</Text>
-                                    <TextInput
+                                    <StyledText className="text-zinc-500 font-medium mb-2 ml-1">Attended</StyledText>
+                                    <StyledTextInput
                                         placeholder="0"
                                         keyboardType="number-pad"
                                         placeholderTextColor="#A1A1AA"
@@ -188,7 +189,7 @@ export default function AddSubjectScreen({ navigation, route }: any) {
 
                         {/* Color Picker */}
                         <View>
-                            <Text className="text-zinc-500 font-medium mb-3 ml-1">Accent Color</Text>
+                            <StyledText className="text-zinc-500 font-medium mb-3 ml-1">Accent Color</StyledText>
                             <View className="flex-row flex-wrap gap-4">
                                 {COLORS.map((color) => (
                                     <TouchableOpacity
@@ -207,23 +208,23 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                 </ScrollView>
 
                 {/* Action Buttons */}
-                <View className="mt-4 gap-3">
+                <View className="mt-4 gap-3 mb-2">
                     <TouchableOpacity
                         onPress={handleSave}
                         disabled={isSubmitting}
                         className={`bg-indigo-600 p-5 rounded-2xl flex-row items-center justify-center shadow-lg shadow-indigo-500/30 ${isSubmitting ? 'opacity-50' : 'opacity-100'}`}
                     >
                         <Save size={20} color="white" style={{ marginRight: 8 }} />
-                        <Text className="text-white font-bold text-lg">{isEditing ? 'Save Changes' : 'Create Subject'}</Text>
+                        <StyledText className="text-white font-bold text-lg">{isEditing ? 'Save Changes' : 'Create Subject'}</StyledText>
                     </TouchableOpacity>
 
                     {isEditing && (
                         <TouchableOpacity
-                            onPress={handleDelete}
+                            onPress={onDeletePress} // <--- Opens Modal
                             className="bg-red-50 dark:bg-red-900/20 p-5 rounded-2xl flex-row items-center justify-center border border-red-100 dark:border-red-900/30"
                         >
                             <Trash2 size={20} className="text-red-500" style={{ marginRight: 8 }} />
-                            <Text className="text-red-500 font-bold text-lg">Delete Subject</Text>
+                            <StyledText className="text-red-500 font-bold text-lg">Delete Subject</StyledText>
                         </TouchableOpacity>
                     )}
 
@@ -231,10 +232,50 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                         onPress={() => navigation.goBack()}
                         className="p-3 items-center"
                     >
-                        <Text className="text-zinc-500 font-bold">Cancel</Text>
+                        <StyledText className="text-zinc-500 font-bold">Cancel</StyledText>
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* --- CUSTOM DELETE MODAL --- */}
+            <Modal visible={isDeleteModalOpen} transparent animationType="fade">
+                <View className="flex-1 bg-black/60 justify-center items-center px-6">
+                    <View className="w-full bg-white dark:bg-zinc-900 rounded-3xl p-6 items-center">
+
+                        {/* Icon */}
+                        <View className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full items-center justify-center mb-4">
+                            <AlertTriangle size={32} className="text-red-600 dark:text-red-500" />
+                        </View>
+
+                        {/* Text */}
+                        <StyledText className="text-xl font-bold text-zinc-900 dark:text-white text-center mb-2">
+                            Delete Subject?
+                        </StyledText>
+                        <StyledText className="text-zinc-500 text-center mb-8 px-4">
+                            This will permanently delete "{subjectToEdit?.name}" and all its attendance history.
+                        </StyledText>
+
+                        {/* Buttons */}
+                        <View className="flex-row gap-4 w-full">
+                            <TouchableOpacity
+                                onPress={() => setIsDeleteModalOpen(false)}
+                                className="flex-1 py-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center"
+                            >
+                                <StyledText className="font-bold text-zinc-900 dark:text-white">Cancel</StyledText>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={confirmDelete}
+                                className="flex-1 py-4 rounded-xl bg-red-600 items-center shadow-lg shadow-red-500/30"
+                            >
+                                <StyledText className="font-bold text-white">Delete</StyledText>
+                            </TouchableOpacity>
+                        </View>
+
+                    </View>
+                </View>
+            </Modal>
+
         </SafeAreaView>
     );
 }

@@ -52,6 +52,16 @@ export const initDB = async () => {
           FOREIGN KEY (extra_class_id) REFERENCES extra_classes (id)
         );`);
 
+        // Create Notifications Table
+        await txn.execAsync(`CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        type TEXT NOT NULL, -- 'task', 'class', 'system'
+        trigger_at TEXT NOT NULL, -- ISO Date when it should show up
+        is_read INTEGER DEFAULT 0
+        );`);
+
         // Migration: Add columns if they don't exist (for existing databases)
         try {
             await txn.execAsync(`ALTER TABLE attendance ADD COLUMN timetable_id INTEGER;`);
@@ -70,6 +80,12 @@ export const initDB = async () => {
         } catch (e) {
             // Column likely exists
         }
+
+        //Add Settings Columns to Users (Migration)
+        try {
+            await txn.execAsync(`ALTER TABLE users ADD COLUMN notify_classes INTEGER DEFAULT 1;`);
+            await txn.execAsync(`ALTER TABLE users ADD COLUMN notify_tasks INTEGER DEFAULT 1;`);
+        } catch (e) { /* Ignore if exists */ }
 
         await txn.execAsync(`CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -455,3 +471,88 @@ export const getCalendarMarkers = async (): Promise<Record<string, any>> => {
 
 // Note: We will reuse 'getScheduleForDay', 'getExtraClassesForDate', and 'getAttendanceByDate'
 // in the screen logic to reconstruct the day.
+
+
+// --- NOTIFICATION & SETTINGS OPERATIONS ---
+
+// 1. Get Notification Settings
+export const getNotificationSettings = async () => {
+    const db = await getDatabase();
+    return await db.getFirstAsync<{ notify_classes: number; notify_tasks: number }>(
+        'SELECT notify_classes, notify_tasks FROM users LIMIT 1'
+    );
+};
+
+// 2. Update Notification Settings
+export const updateNotificationSettings = async (type: 'classes' | 'tasks', value: boolean) => {
+    const db = await getDatabase();
+    const col = type === 'classes' ? 'notify_classes' : 'notify_tasks';
+    const intVal = value ? 1 : 0;
+    await db.runAsync(`UPDATE users SET ${col} = ? WHERE id = (SELECT id FROM users LIMIT 1)`, [intVal]);
+};
+
+// 3. Save a Notification (for the In-App History)
+export const logNotification = async (title: string, body: string, type: string, triggerAt: string) => {
+    const db = await getDatabase();
+    await db.runAsync(
+        'INSERT INTO notifications (title, body, type, trigger_at, is_read) VALUES (?, ?, ?, ?, 0)',
+        [title, body, type, triggerAt]
+    );
+};
+
+// 4. Get "Arrived" Notifications (trigger_at <= NOW)
+export const getInboxNotifications = async () => {
+    const db = await getDatabase();
+    const now = new Date().toISOString();
+    return await db.getAllAsync<{ id: number; title: string; body: string; type: string; is_read: number; trigger_at: string }>(
+        `SELECT * FROM notifications WHERE trigger_at <= ? ORDER BY trigger_at DESC`,
+        [now]
+    );
+};
+
+// 5. Mark All as Read / Clear
+export const clearNotifications = async () => {
+    const db = await getDatabase();
+    // Option A: Delete them
+    await db.runAsync('DELETE FROM notifications');
+    // Option B: Just mark read (if you wanted history)
+    // await db.runAsync('UPDATE notifications SET is_read = 1');
+};
+
+// ... existing code ...
+
+// --- DATA MANAGEMENT ---
+
+// 1. Reset Semester (Delete all academic data, keep User Profile)
+export const resetSemesterData = async (): Promise<void> => {
+    const db = await getDatabase();
+    await db.withExclusiveTransactionAsync(async (txn) => {
+        // Delete dependent tables first to avoid Foreign Key conflicts
+        await txn.execAsync('DELETE FROM attendance');
+        await txn.execAsync('DELETE FROM tasks');
+        await txn.execAsync('DELETE FROM extra_classes');
+        await txn.execAsync('DELETE FROM timetable');
+        await txn.execAsync('DELETE FROM notifications');
+
+        // Finally delete subjects
+        await txn.execAsync('DELETE FROM subjects');
+
+        // Optional: Reset SQLite Sequence (IDs start from 1 again)
+        await txn.execAsync("DELETE FROM sqlite_sequence WHERE name IN ('subjects', 'tasks', 'attendance', 'extra_classes', 'notifications')");
+    });
+};
+
+// 2. Get Full Attendance Report (For CSV Export)
+export const getFullAttendanceReport = async () => {
+    const db = await getDatabase();
+    return await db.getAllAsync<{ date: string; subject: string; status: string; type: string }>(
+        `SELECT a.date, s.name as subject, a.status, 
+       CASE 
+          WHEN a.extra_class_id IS NOT NULL THEN 'Extra Class'
+          ELSE 'Regular'
+       END as type
+       FROM attendance a
+       JOIN subjects s ON a.subject_id = s.id
+       ORDER BY a.date DESC`
+    );
+};

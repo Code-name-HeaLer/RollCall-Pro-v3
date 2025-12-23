@@ -1,17 +1,25 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Modal, LayoutChangeEvent } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, LayoutChangeEvent } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
-import { Plus, CheckCircle2, Circle, Trash2, CalendarDays } from 'lucide-react-native';
-import { styled } from 'nativewind';
+import { Plus, CheckCircle2, Circle, Trash2, CalendarDays, AlertTriangle } from 'lucide-react-native';
+import { styled, useColorScheme } from 'nativewind';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { getTasks, toggleTaskStatus, deleteTask, Task } from '../../db/db';
 import AddTaskScreen from './AddTaskScreen';
 
 const StyledText = styled(Text);
-const StyledView = styled(Animated.View); // Create styled animated view
+const StyledView = styled(Animated.View);
 
 export default function TasksScreen({ navigation }: any) {
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
+
+    // Dynamic Colors for Modal
+    const cardBgColor = isDark ? '#18181b' : '#ffffff';
+    const textColor = isDark ? '#ffffff' : '#18181b';
+    const secondaryTextColor = isDark ? '#a1a1aa' : '#71717a';
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [tab, setTab] = useState<'active' | 'done'>('active');
     const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
@@ -19,6 +27,10 @@ export default function TasksScreen({ navigation }: any) {
     // Animation State
     const [containerWidth, setContainerWidth] = useState(0);
     const translateX = useSharedValue(0);
+
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [taskToDeleteId, setTaskToDeleteId] = useState<number | null>(null);
 
     useFocusEffect(
         useCallback(() => {
@@ -36,22 +48,25 @@ export default function TasksScreen({ navigation }: any) {
         loadTasks();
     };
 
-    const handleDelete = (id: number) => {
-        Alert.alert("Delete Task", "Are you sure?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Delete", style: "destructive", onPress: async () => {
-                    await deleteTask(id);
-                    loadTasks();
-                }
-            }
-        ]);
+    // 1. Open Modal
+    const handleDeletePress = (id: number) => {
+        setTaskToDeleteId(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    // 2. Confirm Delete
+    const confirmDelete = async () => {
+        if (taskToDeleteId !== null) {
+            await deleteTask(taskToDeleteId);
+            loadTasks();
+            setIsDeleteModalOpen(false);
+            setTaskToDeleteId(null);
+        }
     };
 
     // --- ANIMATION LOGIC ---
     const handleTabChange = (selectedTab: 'active' | 'done') => {
         setTab(selectedTab);
-        // Slide to 0 for active, or half width for done
         if (containerWidth > 0) {
             const targetX = selectedTab === 'active' ? 0 : containerWidth / 2;
             translateX.value = withSpring(targetX, {
@@ -65,15 +80,13 @@ export default function TasksScreen({ navigation }: any) {
     const cursorStyle = useAnimatedStyle(() => {
         return {
             transform: [{ translateX: translateX.value }],
-            width: containerWidth / 2, // Explicitly half the width
+            width: containerWidth / 2,
         };
     });
 
     const onLayout = (e: LayoutChangeEvent) => {
-        // Capture the width of the gray container
         const width = e.nativeEvent.layout.width;
         setContainerWidth(width);
-        // Correct initial position if we are on 'done' tab
         if (tab === 'done') {
             translateX.value = width / 2;
         }
@@ -87,6 +100,8 @@ export default function TasksScreen({ navigation }: any) {
         <ScreenWrapper>
             <View className="flex-row justify-between items-center mb-6 mt-2">
                 <StyledText className="text-3xl font-bold text-zinc-900 dark:text-white">Tasks</StyledText>
+                {/* Note: If you registered AddTask in AppNavigator, use navigation.navigate('AddTask') instead of modal */}
+                {/* Assuming inline modal for now based on your code: */}
                 <TouchableOpacity
                     onPress={() => setIsAddTaskOpen(true)}
                     className="w-12 h-12 bg-indigo-600 rounded-full items-center justify-center shadow-lg shadow-indigo-500/30"
@@ -100,7 +115,6 @@ export default function TasksScreen({ navigation }: any) {
                 onLayout={onLayout}
                 className="relative flex-row bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl mb-6 h-12"
             >
-                {/* 1. The Sliding Cursor (Absolute) */}
                 {containerWidth > 0 && (
                     <StyledView
                         style={[cursorStyle]}
@@ -108,7 +122,6 @@ export default function TasksScreen({ navigation }: any) {
                     />
                 )}
 
-                {/* 2. The Buttons (Overlay) */}
                 <TouchableOpacity
                     onPress={() => handleTabChange('active')}
                     className="flex-1 items-center justify-center z-10"
@@ -129,52 +142,72 @@ export default function TasksScreen({ navigation }: any) {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                {/* Active Tasks List (kept mounted, just hidden when not active) */}
-                <View style={{ display: tab === 'active' ? 'flex' : 'none' }}>
-                    {activeTasks.map((item) => (
-                        <TaskItem
-                            key={item.id}
-                            item={item}
-                            onToggle={() => handleToggle(item.id, item.is_completed)}
-                            onDelete={() => handleDelete(item.id)}
-                        />
-                    ))}
 
-                    {activeTasks.length === 0 && (
-                        <View className="items-center mt-10 opacity-50">
-                            <CheckCircle2 size={48} className="text-zinc-300 dark:text-zinc-600 mb-2" />
-                            <StyledText className="text-zinc-400 font-medium">No tasks here</StyledText>
-                        </View>
-                    )}
-                </View>
+                {/* LIST RENDERING */}
+                {(tab === 'active' ? activeTasks : completedTasks).map((item) => (
+                    <TaskItem
+                        key={item.id}
+                        item={item}
+                        onToggle={() => handleToggle(item.id, item.is_completed)}
+                        onDelete={() => handleDeletePress(item.id)} // Trigger Modal
+                    />
+                ))}
 
-                {/* Completed Tasks List (kept mounted, just hidden when not active) */}
-                <View style={{ display: tab === 'done' ? 'flex' : 'none' }}>
-                    {completedTasks.map((item) => (
-                        <TaskItem
-                            key={item.id}
-                            item={item}
-                            onToggle={() => handleToggle(item.id, item.is_completed)}
-                            onDelete={() => handleDelete(item.id)}
-                        />
-                    ))}
-
-                    {completedTasks.length === 0 && (
-                        <View className="items-center mt-10 opacity-50">
-                            <CheckCircle2 size={48} className="text-zinc-300 dark:text-zinc-600 mb-2" />
-                            <StyledText className="text-zinc-400 font-medium">No tasks here</StyledText>
-                        </View>
-                    )}
-                </View>
+                {/* EMPTY STATE */}
+                {((tab === 'active' && activeTasks.length === 0) || (tab === 'done' && completedTasks.length === 0)) && (
+                    <View className="items-center mt-10 opacity-50">
+                        <CheckCircle2 size={48} className="text-zinc-300 dark:text-zinc-600 mb-2" />
+                        <StyledText className="text-zinc-400 font-medium">No tasks here</StyledText>
+                    </View>
+                )}
             </ScrollView>
 
             {/* --- ADD TASK MODAL --- */}
             <Modal visible={isAddTaskOpen} animationType="slide" presentationStyle="pageSheet">
+                {/* Ensure AddTaskScreen accepts onClose prop or use navigation if configured */}
                 <AddTaskScreen
-                    onClose={() => setIsAddTaskOpen(false)}
-                    onTaskCreated={loadTasks}
+                    // @ts-ignore - Handle prop passing or navigation
+                    navigation={{ goBack: () => setIsAddTaskOpen(false) }}
                 />
             </Modal>
+
+            {/* --- CUSTOM DELETE MODAL --- */}
+            <Modal visible={isDeleteModalOpen} transparent animationType="fade">
+                <View className="flex-1 bg-black/60 justify-center items-center px-6">
+                    <View style={{ backgroundColor: cardBgColor }} className="w-full rounded-3xl p-6 items-center">
+
+                        <View className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full items-center justify-center mb-4">
+                            <AlertTriangle size={32} className="text-red-600 dark:text-red-500" />
+                        </View>
+
+                        <Text style={{ color: textColor }} className="text-xl font-bold text-center mb-2">
+                            Delete Task?
+                        </Text>
+                        <Text style={{ color: secondaryTextColor }} className="text-center mb-8 px-4">
+                            Are you sure you want to remove this task permanently?
+                        </Text>
+
+                        <View className="flex-row gap-4 w-full">
+                            <TouchableOpacity
+                                onPress={() => setIsDeleteModalOpen(false)}
+                                style={{ backgroundColor: isDark ? '#27272a' : '#f4f4f5' }}
+                                className="flex-1 py-4 rounded-xl items-center"
+                            >
+                                <Text style={{ color: textColor }} className="font-bold">Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={confirmDelete}
+                                className="flex-1 py-4 rounded-xl bg-red-600 items-center shadow-lg shadow-red-500/30"
+                            >
+                                <Text className="font-bold text-white">Delete</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                    </View>
+                </View>
+            </Modal>
+
         </ScreenWrapper>
     );
 }
@@ -211,7 +244,7 @@ const TaskItem = ({ item, onToggle, onDelete }: any) => {
             </View>
 
             <TouchableOpacity onPress={onDelete} className="p-2">
-                <Trash2 size={18} className="text-zinc-300 hover:text-red-500" />
+                <Trash2 size={18} color="#ef4444" />
             </TouchableOpacity>
         </View>
     );

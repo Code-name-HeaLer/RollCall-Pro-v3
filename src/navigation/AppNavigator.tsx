@@ -6,7 +6,6 @@ import { checkUserExists } from '../db/db';
 import OnboardingScreen from '../screens/Onboarding/OnboardingScreen';
 import TabNavigator from './TabNavigator';
 import AddSubjectScreen from '../screens/Subjects/AddSubjectScreen';
-import TimetableScreen from '../screens/Subjects/TimetableScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,11 +41,6 @@ export default function AppNavigator() {
             <Stack.Screen
                 name="AddSubject"
                 component={AddSubjectScreen}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen
-                name="Timetable"
-                component={TimetableScreen}
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
             />
 

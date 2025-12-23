@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import { styled, useColorScheme } from 'nativewind';
 import { getSubjects, Subject, addTask } from '../../db/db';
+import { scheduleSmartNotification } from '../../utils/notificationService';
 
 const StyledText = styled(Text);
 
@@ -43,6 +44,13 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
         for (const t of triggers) {
             const triggerDate = new Date(due.getTime() - t.hours * 60 * 60 * 1000);
 
+            // Use the smart service
+            await scheduleSmartNotification(
+                `Task Due in ${t.hours} Hours! ⏳`,
+                `Don't forget to complete: "${taskTitle}"`,
+                'task',
+                triggerDate
+            );
             // Only schedule if the trigger time is in the future
             if (triggerDate > new Date()) {
                 await Notifications.scheduleNotificationAsync({
@@ -159,16 +167,14 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
                                 {/* None pill */}
                                 <TouchableOpacity
                                     onPress={() => setSelectedSubjectId(null)}
-                                    className={`mr-3 px-4 py-2 rounded-full border ${
-                                        selectedSubjectId === null
-                                            ? 'bg-zinc-900 border-zinc-900 dark:bg-white dark:border-white'
-                                            : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
-                                    }`}
+                                    className={`mr-3 px-4 py-2 rounded-full border ${selectedSubjectId === null
+                                        ? 'bg-zinc-900 border-zinc-900 dark:bg-white dark:border-white'
+                                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
+                                        }`}
                                 >
                                     <StyledText
-                                        className={`text-xs font-bold ${
-                                            selectedSubjectId === null ? 'text-white dark:text-zinc-900' : 'text-zinc-500'
-                                        }`}
+                                        className={`text-xs font-bold ${selectedSubjectId === null ? 'text-white dark:text-zinc-900' : 'text-zinc-500'
+                                            }`}
                                     >
                                         None
                                     </StyledText>
@@ -179,22 +185,20 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
                                     <TouchableOpacity
                                         key={sub.id}
                                         onPress={() => setSelectedSubjectId(sub.id)}
-                                        className={`mr-3 px-4 py-2 rounded-full border flex-row items-center ${
-                                            selectedSubjectId === sub.id
-                                                ? 'bg-indigo-50 border-indigo-500'
-                                                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
-                                        }`}
+                                        className={`mr-3 px-4 py-2 rounded-full border flex-row items-center ${selectedSubjectId === sub.id
+                                            ? 'bg-indigo-50 border-indigo-500'
+                                            : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'
+                                            }`}
                                     >
                                         <View
                                             style={{ backgroundColor: sub.color }}
                                             className="w-2 h-2 rounded-full mr-2"
                                         />
                                         <StyledText
-                                            className={`text-xs font-bold ${
-                                                selectedSubjectId === sub.id
-                                                    ? 'text-indigo-700'
-                                                    : 'text-zinc-700 dark:text-zinc-300'
-                                            }`}
+                                            className={`text-xs font-bold ${selectedSubjectId === sub.id
+                                                ? 'text-indigo-700'
+                                                : 'text-zinc-700 dark:text-zinc-300'
+                                                }`}
                                         >
                                             {sub.name}
                                         </StyledText>

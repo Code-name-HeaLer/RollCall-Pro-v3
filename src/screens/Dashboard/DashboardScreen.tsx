@@ -12,6 +12,14 @@ import {
     markAttendance, getSubjectById, getSubjects, Subject,
     addExtraClass, getExtraClassesForDate
 } from '../../db/db';
+import { getInboxNotifications, clearNotifications } from '../../db/db';
+import { BellRing, CheckCheck, Inbox } from 'lucide-react-native'; // New Icons
+import { styled } from 'nativewind';
+
+const StyledText = styled(Text);
+
+
+
 
 export default function DashboardScreen() {
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -36,6 +44,10 @@ export default function DashboardScreen() {
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
     const [extraLocation, setExtraLocation] = useState('');
+
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const unreadCount = notifications.filter(n => n.is_read === 0).length; // Or just length if we clear them
 
     // Load Data
     useFocusEffect(
@@ -93,7 +105,18 @@ export default function DashboardScreen() {
         }
         setWeeklyClassCount(totalWeeklyClasses);
 
+        // NEW: Fetch Inbox
+        const inbox = await getInboxNotifications();
+        setNotifications(inbox);
+
         setLoading(false);
+    };
+
+    // Handler
+    const handleClearNotifications = async () => {
+        await clearNotifications();
+        setNotifications([]); // UI Update
+        setIsNotifOpen(false); // Close Modal
     };
 
     const handleMarkAttendance = async (
@@ -167,8 +190,13 @@ export default function DashboardScreen() {
                             <Text className="text-3xl font-bold text-zinc-900 dark:text-white">Hello, {userName}!</Text>
                             <Text className="text-zinc-500 dark:text-zinc-400 font-medium">{currentDate}</Text>
                         </View>
-                        <TouchableOpacity className="p-3 bg-white dark:bg-zinc-800 rounded-full shadow-sm border border-zinc-100 dark:border-zinc-700">
+                        <TouchableOpacity
+                            onPress={() => setIsNotifOpen(true)} // Open Modal
+                            className="p-3 bg-white dark:bg-zinc-800 rounded-full shadow-sm border border-zinc-100 dark:border-zinc-700">
                             <Bell size={20} color="#A1A1AA" />
+                            {notifications.length > 0 && (
+                                <View className="absolute top-2 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-800" />
+                            )}
                         </TouchableOpacity>
                     </View>
 
@@ -385,6 +413,51 @@ export default function DashboardScreen() {
                             <Text className="text-white font-bold text-lg">Add to Today's Schedule</Text>
                         </TouchableOpacity>
                     </View>
+                </Modal>
+                {/* 6. ADD THE MODAL */}
+                <Modal visible={isNotifOpen} transparent animationType="fade">
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        onPress={() => setIsNotifOpen(false)}
+                        className="flex-1 bg-black/50 justify-center items-center px-6"
+                    >
+                        <TouchableOpacity activeOpacity={1} className="w-full bg-white dark:bg-zinc-900 rounded-3xl p-6 max-h-[60%]">
+                            <View className="flex-row justify-between items-center mb-6">
+                                <StyledText className="text-xl font-bold text-zinc-900 dark:text-white">Notifications</StyledText>
+                                {notifications.length > 0 && (
+                                    <TouchableOpacity onPress={handleClearNotifications} className="flex-row items-center bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full">
+                                        <CheckCheck size={14} className="text-zinc-500 mr-1" />
+                                        <StyledText className="text-xs font-bold text-zinc-500">Clear All</StyledText>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                {notifications.length === 0 ? (
+                                    <View className="items-center py-10">
+                                        <View className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded-full mb-4">
+                                            <Inbox size={32} className="text-zinc-400" />
+                                        </View>
+                                        <StyledText className="text-zinc-500 font-medium">No new notifications</StyledText>
+                                        <StyledText className="text-zinc-400 text-xs mt-1">You're all caught up!</StyledText>
+                                    </View>
+                                ) : (
+                                    notifications.map((notif) => (
+                                        <View key={notif.id} className="flex-row items-start border-b border-zinc-100 dark:border-zinc-800 py-4 last:border-0">
+                                            <View className={`w-2 h-2 rounded-full mt-1.5 mr-3 ${notif.type === 'task' ? 'bg-indigo-500' : 'bg-orange-500'}`} />
+                                            <View className="flex-1">
+                                                <StyledText className="text-base font-bold text-zinc-900 dark:text-white">{notif.title}</StyledText>
+                                                <StyledText className="text-sm text-zinc-500 mt-0.5">{notif.body}</StyledText>
+                                                <StyledText className="text-[10px] text-zinc-400 mt-2">
+                                                    {new Date(notif.trigger_at).toLocaleDateString()} • {new Date(notif.trigger_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </StyledText>
+                                            </View>
+                                        </View>
+                                    ))
+                                )}
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
                 </Modal>
             </PageTransition>
         </ScreenWrapper>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, FlatList, Alert, Platform } from 'react-native';
-import { X, Plus, MapPin, Clock, Trash2 } from 'lucide-react-native';
+import { X, Plus, MapPin, Clock, Trash2, AlertTriangle } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getSubjects, Subject, addScheduleItem, getScheduleForDay, TimetableItem, deleteScheduleItem } from '../../db/db';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,17 +15,22 @@ interface TimetableModalContentProps {
 export default function TimetableModalContent({ onClose }: TimetableModalContentProps) {
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
+
+    // Dynamic Colors
     const bgColor = isDark ? '#09090b' : '#f8fafc';
     const textColor = isDark ? '#ffffff' : '#18181b';
     const secondaryTextColor = isDark ? '#a1a1aa' : '#71717a';
     const iconBgColor = isDark ? '#27272a' : '#e4e4e7';
-    const [selectedDay, setSelectedDay] = useState(new Date().getDay()); // Default to today
+    const cardBgColor = isDark ? '#18181b' : '#ffffff';
+    const borderColor = isDark ? '#27272a' : '#e4e4e7';
+
+    const [selectedDay, setSelectedDay] = useState(new Date().getDay());
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Data State
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [schedule, setSchedule] = useState<TimetableItem[]>([]);
-    const [refresh, setRefresh] = useState(0); // Trigger re-fetch
+    const [refresh, setRefresh] = useState(0);
 
     // Form State
     const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
@@ -37,17 +42,20 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
 
-    // 1. Load Subjects on Mount
+    // --- CUSTOM DELETE MODAL STATE ---
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [classToDeleteId, setClassToDeleteId] = useState<number | null>(null);
+
+    // 1. Load Subjects
     useEffect(() => {
         getSubjects().then(setSubjects);
     }, []);
 
-    // 2. Load Schedule when Day changes or Refresh triggers
+    // 2. Load Schedule
     useEffect(() => {
         getScheduleForDay(selectedDay).then(setSchedule);
     }, [selectedDay, refresh]);
 
-    // Helper: Format Time object to "HH:MM" string
     const formatTime = (date: Date) => {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     };
@@ -66,9 +74,8 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                 formatTime(endTime),
                 location
             );
-            setRefresh(prev => prev + 1); // Reload list
+            setRefresh(prev => prev + 1);
             setIsAddModalOpen(false);
-            // Reset Form
             setLocation('');
             setSelectedSubjectId(null);
         } catch (e) {
@@ -77,16 +84,20 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
         }
     };
 
-    const handleDelete = async (id: number) => {
-        Alert.alert("Delete Class", "Are you sure?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Delete", style: "destructive", onPress: async () => {
-                    await deleteScheduleItem(id);
-                    setRefresh(prev => prev + 1);
-                }
-            }
-        ])
+    // --- NEW LOGIC: Open Custom Modal ---
+    const handleDeletePress = (id: number) => {
+        setClassToDeleteId(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    // --- NEW LOGIC: Confirm Delete ---
+    const confirmDelete = async () => {
+        if (classToDeleteId !== null) {
+            await deleteScheduleItem(classToDeleteId);
+            setRefresh(prev => prev + 1);
+            setIsDeleteModalOpen(false);
+            setClassToDeleteId(null);
+        }
     };
 
     return (
@@ -95,8 +106,8 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-6">
                     <Text style={{ color: textColor }} className="text-2xl font-bold">Manage Schedule</Text>
-                    <TouchableOpacity 
-                        onPress={onClose} 
+                    <TouchableOpacity
+                        onPress={onClose}
                         style={{ backgroundColor: iconBgColor }}
                         className="p-2 rounded-full"
                     >
@@ -111,9 +122,19 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                             <TouchableOpacity
                                 key={day}
                                 onPress={() => setSelectedDay(index)}
-                                className={`mr-3 px-5 py-2 rounded-full justify-center ${selectedDay === index ? 'bg-indigo-600' : 'bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800'}`}
+                                className={`mr-3 px-5 py-2 rounded-full justify-center ${selectedDay === index ? 'bg-indigo-600' : ''}`}
+                                style={{
+                                    backgroundColor: selectedDay === index ? '#4F46E5' : cardBgColor,
+                                    borderWidth: selectedDay === index ? 0 : 1,
+                                    borderColor: borderColor
+                                }}
                             >
-                                <Text className={`font-bold ${selectedDay === index ? 'text-white' : 'text-zinc-500'}`}>{day}</Text>
+                                <Text style={{
+                                    fontWeight: 'bold',
+                                    color: selectedDay === index ? '#ffffff' : secondaryTextColor
+                                }}>
+                                    {day}
+                                </Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -129,9 +150,17 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                         </View>
                     }
                     renderItem={({ item }) => (
-                        <View className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border-l-4 border-zinc-100 dark:border-zinc-800 mb-3 shadow-sm flex-row justify-between items-center" style={{ borderLeftColor: item.subject_color }}>
+                        <View
+                            style={{
+                                backgroundColor: cardBgColor,
+                                borderColor: borderColor,
+                                borderLeftColor: item.subject_color,
+                                borderLeftWidth: 4
+                            }}
+                            className="p-4 rounded-2xl border mb-3 shadow-sm flex-row justify-between items-center"
+                        >
                             <View>
-                                <Text className="text-lg font-bold text-zinc-900 dark:text-white">{item.subject_name}</Text>
+                                <Text style={{ color: textColor }} className="text-lg font-bold">{item.subject_name}</Text>
                                 <View className="flex-row items-center mt-1">
                                     <Clock size={14} color={secondaryTextColor} />
                                     <Text style={{ color: secondaryTextColor }} className="text-xs mr-3 ml-1">{item.start_time} - {item.end_time}</Text>
@@ -143,7 +172,9 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                                     ) : null}
                                 </View>
                             </View>
-                            <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-2">
+
+                            {/* --- BUTTON TRIGGERS NEW MODAL --- */}
+                            <TouchableOpacity onPress={() => handleDeletePress(item.id)} className="p-2">
                                 <Trash2 size={18} color="#f87171" />
                             </TouchableOpacity>
                         </View>
@@ -176,11 +207,20 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                                     <TouchableOpacity
                                         key={sub.id}
                                         onPress={() => setSelectedSubjectId(sub.id)}
-                                        className={`mr-3 p-3 rounded-xl border ${selectedSubjectId === sub.id ? 'bg-indigo-50 border-indigo-500' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'}`}
+                                        style={{
+                                            backgroundColor: selectedSubjectId === sub.id ? 'rgba(79, 70, 229, 0.1)' : cardBgColor,
+                                            borderColor: selectedSubjectId === sub.id ? '#4F46E5' : borderColor
+                                        }}
+                                        className="mr-3 p-3 rounded-xl border"
                                     >
                                         <View className="flex-row items-center gap-2">
                                             <View style={{ backgroundColor: sub.color }} className="w-3 h-3 rounded-full" />
-                                            <Text className={`font-bold ${selectedSubjectId === sub.id ? 'text-indigo-700' : 'text-zinc-700 dark:text-zinc-300'}`}>{sub.name}</Text>
+                                            <Text style={{
+                                                fontWeight: 'bold',
+                                                color: selectedSubjectId === sub.id ? '#4F46E5' : secondaryTextColor
+                                            }}>
+                                                {sub.name}
+                                            </Text>
                                         </View>
                                     </TouchableOpacity>
                                 ))}
@@ -246,8 +286,48 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                         </TouchableOpacity>
                     </View>
                 </Modal>
+
+                {/* --- CUSTOM DELETE MODAL --- */}
+                <Modal visible={isDeleteModalOpen} transparent animationType="fade">
+                    <View className="flex-1 bg-black/60 justify-center items-center px-6">
+                        <View style={{ backgroundColor: cardBgColor }} className="w-full rounded-3xl p-6 items-center">
+
+                            {/* Icon */}
+                            <View className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full items-center justify-center mb-4">
+                                <AlertTriangle size={32} className="text-red-600 dark:text-red-500" />
+                            </View>
+
+                            {/* Text */}
+                            <Text style={{ color: textColor }} className="text-xl font-bold text-center mb-2">
+                                Remove Class?
+                            </Text>
+                            <Text style={{ color: secondaryTextColor }} className="text-center mb-8 px-4">
+                                This will remove this slot from your weekly schedule. Past attendance for this day will remain.
+                            </Text>
+
+                            {/* Buttons */}
+                            <View className="flex-row gap-4 w-full">
+                                <TouchableOpacity
+                                    onPress={() => setIsDeleteModalOpen(false)}
+                                    style={{ backgroundColor: isDark ? '#27272a' : '#f4f4f5' }}
+                                    className="flex-1 py-4 rounded-xl items-center"
+                                >
+                                    <Text style={{ color: textColor }} className="font-bold">Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={confirmDelete}
+                                    className="flex-1 py-4 rounded-xl bg-red-600 items-center shadow-lg shadow-red-500/30"
+                                >
+                                    <Text className="font-bold text-white">Delete</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        </View>
+                    </View>
+                </Modal>
+
             </View>
         </SafeAreaView>
     );
 }
-
