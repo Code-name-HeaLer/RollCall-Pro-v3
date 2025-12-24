@@ -9,20 +9,30 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f8fafc"
+      "backgroundColor": "#dce3ec"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourname.rollcallpro",
-      "userInterfaceStyle": "automatic"
+      "bundleIdentifier": "com.healer.rollcallpro",
+      "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "CFBundleDisplayName": "RollCall Pro"
+      }
     },
     "android": {
-      "package": "com.yourname.rollcallpro",
+      "package": "com.healer.rollcallpro",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f8fafc"
+        "backgroundColor": "#dce3ec"
       },
-      "userInterfaceStyle": "automatic"
+      "userInterfaceStyle": "automatic",
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#dce3ec"
     },
     "plugins": [
       "expo-font",
@@ -30,13 +40,21 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f8fafc",
+          "backgroundColor": "#dce3ec",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#09090b"
+            "backgroundColor": "#09090b",
+            "imageWidth": 200
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#dce3ec"
         }
       ]
     ],
