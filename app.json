@@ -1,36 +1,48 @@
 {
   "expo": {
-    "name": "my-expo-app",
-    "slug": "my-expo-app",
+    "name": "RollCall Pro",
+    "slug": "rollcall-pro",
     "version": "1.0.0",
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "experiments": {
-      "tsconfigPaths": true
-    },
-    "plugins": [
-      "expo-sqlite",
-      "expo-font"
-    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f8fafc"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.rollcallpro",
+      "userInterfaceStyle": "automatic"
     },
     "android": {
+      "package": "com.yourname.rollcallpro",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#f8fafc"
+      },
+      "userInterfaceStyle": "automatic"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f8fafc",
+          "imageSource": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "dark": {
+            "imageSource": "./assets/splash-icon.png",
+            "backgroundColor": "#09090b"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4603e77e-11a6-4b95-8460-c0e92d5de791"
       }
     }
   }
