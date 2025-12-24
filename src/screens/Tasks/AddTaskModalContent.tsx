@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, BackHandler } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { X, Calendar as CalendarIcon, Link } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface AddTaskModalContentProps {
     onClose: () => void;
@@ -19,9 +20,21 @@ export default function AddTaskModalContent({ onClose }: AddTaskModalContentProp
     const secondaryTextColor = isDark ? '#a1a1aa' : '#71717a';
     const iconBgColor = isDark ? '#27272a' : '#e4e4e7';
     
+    // Handle back button
+    useFocusEffect(
+        React.useCallback(() => {
+            const onBackPress = () => {
+                onClose();
+                return true;
+            };
+            BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+        }, [onClose])
+    );
+    
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'left', 'right']}>
-            <View className="flex-1 p-6">
+            <View className="flex-1 p-6 pt-4">
 
             {/* Header */}
             <View className="flex-row justify-between items-center mb-8">

@@ -10,7 +10,6 @@ import * as Notifications from 'expo-notifications';
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDB, getUser } from './src/db/db';
-import './global.css';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

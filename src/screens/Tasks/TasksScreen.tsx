@@ -164,10 +164,9 @@ export default function TasksScreen({ navigation }: any) {
 
             {/* --- ADD TASK MODAL --- */}
             <Modal visible={isAddTaskOpen} animationType="slide" presentationStyle="pageSheet">
-                {/* Ensure AddTaskScreen accepts onClose prop or use navigation if configured */}
                 <AddTaskScreen
-                    // @ts-ignore - Handle prop passing or navigation
-                    navigation={{ goBack: () => setIsAddTaskOpen(false) }}
+                    onClose={() => setIsAddTaskOpen(false)}
+                    onTaskCreated={loadTasks}
                 />
             </Modal>
 

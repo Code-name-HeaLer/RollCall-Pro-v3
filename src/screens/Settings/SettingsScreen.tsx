@@ -6,6 +6,7 @@ import { Moon, Bell, Download, Upload, Info, ChevronRight, Trash2, AlertTriangle
 import { updateThemePreference, getNotificationSettings, updateNotificationSettings } from '../../db/db';
 import { resetSemesterData } from '../../db/db';
 import { exportAttendanceToCSV } from '../../utils/csvHelper';
+import CustomModal from '../../components/ui/CustomModal';
 
 const StyledText = styled(Text);
 
@@ -18,6 +19,17 @@ export default function SettingsScreen() {
     const [notifyTasks, setNotifyTasks] = useState(true);
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [resetModalState, setResetModalState] = useState<{ visible: boolean; type: 'success' | 'error'; message: string }>({
+        visible: false,
+        type: 'success',
+        message: '',
+    });
+    const [exportModalState, setExportModalState] = useState<{ visible: boolean; type: 'error' | 'success'; message: string }>({
+        visible: false,
+        type: 'error',
+        message: '',
+    });
+    const [importModalVisible, setImportModalVisible] = useState(false);
 
     // Load Settings on Mount
     useEffect(() => {
@@ -76,14 +88,23 @@ export default function SettingsScreen() {
     const handleExport = async () => {
         try {
             await exportAttendanceToCSV();
+            setExportModalState({
+                visible: true,
+                type: 'success',
+                message: 'Your attendance data has been exported to CSV successfully!',
+            });
         } catch (e: any) {
-            Alert.alert("Export Failed", e.message || "Something went wrong");
+            setExportModalState({
+                visible: true,
+                type: 'error',
+                message: e.message || 'Something went wrong during export',
+            });
         }
     };
 
     const handleImport = () => {
         // Placeholder for now - Import is complex!
-        Alert.alert("Coming Soon", "Import functionality will be available in v4.0!");
+        setImportModalVisible(true);
     };
 
     // The Actual Delete Logic (Called from Custom Modal)
@@ -91,10 +112,17 @@ export default function SettingsScreen() {
         try {
             await resetSemesterData();
             setIsDeleteModalOpen(false);
-            // Optional: You could show a small "Toast" here or just a success alert
-            Alert.alert("Reset Complete", "Welcome to your new semester! 🎓");
+            setResetModalState({
+                visible: true,
+                type: 'success',
+                message: 'Welcome to your new semester! 🎓',
+            });
         } catch (e) {
-            Alert.alert("Error", "Could not delete data");
+            setResetModalState({
+                visible: true,
+                type: 'error',
+                message: 'Could not delete data',
+            });
         }
     };
 
@@ -219,6 +247,7 @@ export default function SettingsScreen() {
                 </View>
 
             </ScrollView>
+
             {/* --- CUSTOM DANGER MODAL --- */}
             <Modal visible={isDeleteModalOpen} transparent animationType="fade">
                 <View className="flex-1 bg-black/60 justify-center items-center px-6">
@@ -257,6 +286,36 @@ export default function SettingsScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Reset Success/Error Modal */}
+            <CustomModal
+                visible={resetModalState.visible}
+                type={resetModalState.type}
+                title={resetModalState.type === 'success' ? 'Reset Complete' : 'Error'}
+                message={resetModalState.message}
+                primaryButtonText="Ok"
+                onPrimaryPress={() => setResetModalState({ ...resetModalState, visible: false })}
+            />
+
+            {/* Export Success/Error Modal */}
+            <CustomModal
+                visible={exportModalState.visible}
+                type={exportModalState.type}
+                title={exportModalState.type === 'success' ? 'Export Successful' : 'Export Failed'}
+                message={exportModalState.message}
+                primaryButtonText="Ok"
+                onPrimaryPress={() => setExportModalState({ ...exportModalState, visible: false })}
+            />
+
+            {/* Import Coming Soon Modal */}
+            <CustomModal
+                visible={importModalVisible}
+                type="info"
+                title="Coming Soon"
+                message="Import functionality will be available in v4.0!"
+                primaryButtonText="Got It"
+                onPrimaryPress={() => setImportModalVisible(false)}
+            />
         </ScreenWrapper>
     );
 }

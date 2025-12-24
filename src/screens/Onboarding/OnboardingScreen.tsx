@@ -3,10 +3,18 @@ import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOutLeft, FadeInRight } from 'react-native-reanimated';
 import { ArrowRight, Check } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 // ... imports
 import { createUser } from '../../db/db'; // Import this
 
 export default function OnboardingScreen({ navigation }: any) {
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
+    const bgColor = isDark ? '#09090b' : '#f8fafc';
+    const textColor = isDark ? '#ffffff' : '#18181b';
+    const secondaryTextColor = isDark ? '#a1a1aa' : '#71717a';
+    const borderColor = isDark ? '#27272a' : '#e4e4e7';
+
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [attendance, setAttendance] = useState('');
@@ -28,7 +36,7 @@ export default function OnboardingScreen({ navigation }: any) {
 
 
     return (
-        <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-zinc-950">
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 className="flex-1 justify-center px-8"
@@ -37,25 +45,44 @@ export default function OnboardingScreen({ navigation }: any) {
                 {/* --- Step 1: Name --- */}
                 {step === 1 && (
                     <Animated.View entering={FadeInDown.duration(600)} exiting={FadeOutLeft.duration(400)}>
-                        <Text className="text-zinc-400 font-medium mb-4 text-lg">Let's get started.</Text>
-                        <Text className="text-4xl font-bold text-zinc-900 dark:text-white mb-8 leading-tight">
+                        <Text style={{ color: secondaryTextColor }} className="font-medium mb-4 text-lg">Let's get started.</Text>
+                        <Text style={{ color: textColor }} className="text-4xl font-bold mb-8 leading-tight">
                             What should I {'\n'}call you?
                         </Text>
 
                         <TextInput
-                            className="text-3xl font-bold text-indigo-600 border-b-2 border-zinc-200 dark:border-zinc-800 pb-2 mb-12"
                             placeholder="Your Name"
                             placeholderTextColor="#A1A1AA"
                             value={name}
                             onChangeText={setName}
                             autoFocus
+                            style={{
+                                fontSize: 24,
+                                fontWeight: '700',
+                                color: '#4F46E5',
+                                borderBottomWidth: 2,
+                                borderBottomColor: borderColor,
+                                paddingBottom: 8,
+                                marginBottom: 24,
+                            }}
                         />
 
                         <TouchableOpacity
                             onPress={handleNext}
-                            className="self-start bg-zinc-900 dark:bg-white rounded-full w-16 h-16 items-center justify-center shadow-lg"
+                            style={{
+                                alignSelf: 'flex-start',
+                                backgroundColor: isDark ? '#ffffff' : '#09090b',
+                                width: 64,
+                                height: 64,
+                                borderRadius: 999,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                shadowColor: '#000',
+                                shadowOpacity: 0.1,
+                                shadowRadius: 10,
+                            }}
                         >
-                            <ArrowRight size={28} className="text-white dark:text-zinc-900" />
+                            <ArrowRight size={28} color={isDark ? '#09090b' : '#ffffff'} />
                         </TouchableOpacity>
                     </Animated.View>
                 )}
@@ -63,27 +90,27 @@ export default function OnboardingScreen({ navigation }: any) {
                 {/* --- Step 2: Goals --- */}
                 {step === 2 && (
                     <Animated.View entering={FadeInRight.duration(600)}>
-                        <Text className="text-zinc-400 font-medium mb-4 text-lg">Nice to meet you, {name}.</Text>
-                        <Text className="text-4xl font-bold text-zinc-900 dark:text-white mb-8 leading-tight">
+                        <Text style={{ color: secondaryTextColor }} className="font-medium mb-4 text-lg">Nice to meet you, {name}.</Text>
+                        <Text style={{ color: textColor }} className="text-4xl font-bold mb-8 leading-tight">
                             What's the minimum attendance you need?
                         </Text>
 
-                        <View className="flex-row items-center border-b-2 border-zinc-200 dark:border-zinc-800 pb-2 mb-12 w-1/2">
+                        <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: borderColor, paddingBottom: 8, marginBottom: 48, width: '50%' }}>
                             <TextInput
-                                className="text-3xl font-bold text-indigo-600 flex-1"
                                 placeholder="75"
                                 placeholderTextColor="#A1A1AA"
                                 keyboardType="number-pad"
                                 value={attendance}
                                 onChangeText={setAttendance}
                                 autoFocus
+                                style={{ fontSize: 24, fontWeight: '700', color: '#4F46E5', flex: 1 }}
                             />
-                            <Text className="text-3xl font-bold text-zinc-300">%</Text>
+                            <Text style={{ fontSize: 24, fontWeight: '700', color: '#9CA3AF' }}>%</Text>
                         </View>
 
                         <TouchableOpacity
                             onPress={handleNext}
-                            className="self-start bg-indigo-600 rounded-full w-16 h-16 items-center justify-center shadow-lg shadow-indigo-500/30"
+                            style={{ alignSelf: 'flex-start', backgroundColor: '#4F46E5', borderRadius: 999, width: 64, height: 64, alignItems: 'center', justifyContent: 'center', shadowColor: '#4F46E5', shadowOpacity: 0.25, shadowRadius: 10 }}
                         >
                             <Check size={28} color="white" />
                         </TouchableOpacity>

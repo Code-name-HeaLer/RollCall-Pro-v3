@@ -4,6 +4,7 @@ import { X, Check, Trash2, Save, AlertTriangle } from 'lucide-react-native';
 import { addSubject, updateSubject, deleteSubject, Subject } from '../../db/db';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, styled } from 'nativewind';
+import CustomModal from '../../components/ui/CustomModal';
 
 const COLORS = ['#F43F5E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
 
@@ -33,6 +34,12 @@ export default function AddSubjectScreen({ navigation, route }: any) {
 
     // MODAL STATE
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [validationModal, setValidationModal] = useState<{ visible: boolean; title: string; message: string }>({
+        visible: false,
+        title: '',
+        message: '',
+    });
+    const [deleteErrorModal, setDeleteErrorModal] = useState(false);
 
     // Pre-fill data if editing
     useEffect(() => {
@@ -45,7 +52,11 @@ export default function AddSubjectScreen({ navigation, route }: any) {
 
     const handleSave = async () => {
         if (!name.trim()) {
-            Alert.alert("Hold up!", "Please enter a subject name.");
+            setValidationModal({
+                visible: true,
+                title: 'Hold up!',
+                message: 'Please enter a subject name.',
+            });
             return;
         }
 
@@ -59,7 +70,11 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                     const total = parseInt(classesDone) || 0;
                     const attended = parseInt(classesAttended) || 0;
                     if (attended > total) {
-                        Alert.alert("Math Error", "You can't attend more classes than conducted!");
+                        setValidationModal({
+                            visible: true,
+                            title: 'Math Error',
+                            message: "You can't attend more classes than conducted!",
+                        });
                         setIsSubmitting(false);
                         return;
                     }
@@ -74,7 +89,11 @@ export default function AddSubjectScreen({ navigation, route }: any) {
             navigation.goBack();
         } catch (error) {
             console.error(error);
-            Alert.alert("Error", "Could not save subject.");
+            setValidationModal({
+                visible: true,
+                title: 'Error',
+                message: 'Could not save subject.',
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -94,7 +113,7 @@ export default function AddSubjectScreen({ navigation, route }: any) {
             setIsDeleteModalOpen(false);
             navigation.goBack();
         } catch (e) {
-            Alert.alert("Error", "Could not delete subject");
+            setDeleteErrorModal(true);
         }
     };
 
@@ -123,14 +142,14 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                                 style={{ backgroundColor: mode === 'new' ? (colorScheme === 'dark' ? '#3f3f46' : '#ffffff') : 'transparent' }}
                                 className={`flex-1 py-3 items-center rounded-lg ${mode === 'new' ? 'shadow-sm' : ''}`}
                             >
-                                <StyledText className={`font-bold ${mode === 'new' ? 'text-zinc-900' : 'text-zinc-500'}`}>New Semester</StyledText>
+                                <StyledText className={`font-bold ${mode === 'new' ? (colorScheme === 'dark' ? 'text-white' : 'text-zinc-900') : 'text-zinc-500'}`}>New Semester</StyledText>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setMode('mid')}
                                 style={{ backgroundColor: mode === 'mid' ? (colorScheme === 'dark' ? '#3f3f46' : '#ffffff') : 'transparent' }}
                                 className={`flex-1 py-3 items-center rounded-lg ${mode === 'mid' ? 'shadow-sm' : ''}`}
                             >
-                                <StyledText className={`font-bold ${mode === 'mid' ? 'text-zinc-900' : 'text-zinc-500'}`}>Mid-Sem Start</StyledText>
+                                <StyledText className={`font-bold ${mode === 'mid' ? (colorScheme === 'dark' ? 'text-white' : 'text-zinc-900') : 'text-zinc-500'}`}>Mid-Sem Start</StyledText>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -275,6 +294,26 @@ export default function AddSubjectScreen({ navigation, route }: any) {
                     </View>
                 </View>
             </Modal>
+
+            {/* Validation Modal */}
+            <CustomModal
+                visible={validationModal.visible}
+                type="warning"
+                title={validationModal.title}
+                message={validationModal.message}
+                primaryButtonText="Got It"
+                onPrimaryPress={() => setValidationModal({ ...validationModal, visible: false })}
+            />
+
+            {/* Delete Error Modal */}
+            <CustomModal
+                visible={deleteErrorModal}
+                type="error"
+                title="Error"
+                message="Could not delete subject"
+                primaryButtonText="Try Again"
+                onPrimaryPress={() => setDeleteErrorModal(false)}
+            />
 
         </SafeAreaView>
     );

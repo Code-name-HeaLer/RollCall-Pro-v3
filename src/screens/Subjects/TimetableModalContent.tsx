@@ -102,7 +102,7 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'left', 'right']}>
-            <View className="flex-1 px-6 pt-4">
+            <View className="flex-1 px-6 pt-6">
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-6">
                     <Text style={{ color: textColor }} className="text-2xl font-bold">Manage Schedule</Text>
@@ -191,7 +191,7 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
 
                 {/* --- ADD CLASS MODAL --- */}
                 <Modal visible={isAddModalOpen} animationType="slide" presentationStyle="pageSheet">
-                    <View style={{ flex: 1, backgroundColor: bgColor }} className="p-6">
+                    <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={["top","left","right"]} className="p-6 pt-4">
                         <View className="flex-row justify-between items-center mb-8">
                             <Text style={{ color: textColor }} className="text-xl font-bold">Add Class to {DAYS[selectedDay]}</Text>
                             <TouchableOpacity onPress={() => setIsAddModalOpen(false)}>
@@ -284,7 +284,7 @@ export default function TimetableModalContent({ onClose }: TimetableModalContent
                         <TouchableOpacity onPress={handleSave} className="bg-indigo-600 p-4 rounded-2xl items-center shadow-lg shadow-indigo-500/30">
                             <Text className="text-white font-bold text-lg">Add to Schedule</Text>
                         </TouchableOpacity>
-                    </View>
+                    </SafeAreaView>
                 </Modal>
 
                 {/* --- CUSTOM DELETE MODAL --- */}

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { X, Calendar as CalendarIcon, Link, Check } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { X, Calendar as CalendarIcon } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import { styled, useColorScheme } from 'nativewind';
 import { getSubjects, Subject, addTask } from '../../db/db';
 import { scheduleSmartNotification } from '../../utils/notificationService';
+import CustomModal from '../../components/ui/CustomModal';
 
 const StyledText = styled(Text);
 
@@ -28,12 +30,24 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
     // Subject Linking
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+    
+    // Modal State
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        type: 'error' | 'warning';
+        title: string;
+        message: string;
+    }>({
+        visible: false,
+        type: 'warning',
+        title: '',
+        message: '',
+    });
 
     useEffect(() => {
         getSubjects().then(setSubjects);
     }, []);
 
-    // --- SENIOR ENGINEER LOGIC: Notification Scheduling ---
     const scheduleReminders = async (taskId: number, due: Date, taskTitle: string) => {
         const triggers = [
             { hours: 24, label: 'Tomorrow' },
@@ -51,13 +65,14 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
                 'task',
                 triggerDate
             );
+            
             // Only schedule if the trigger time is in the future
             if (triggerDate > new Date()) {
                 await Notifications.scheduleNotificationAsync({
                     content: {
                         title: `Task Due in ${t.hours} Hours! ⏳`,
                         body: `Don't forget to complete: "${taskTitle}"`,
-                        data: { taskId }, // Store ID to potentially cancel later
+                        data: { taskId },
                     },
                     trigger: { date: triggerDate, type: Notifications.SchedulableTriggerInputTypes.DATE },
                 });
@@ -66,8 +81,37 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
     };
 
     const handleSave = async () => {
-        if (!title.trim()) {
-            Alert.alert("Missing Info", "Please add a task title.");
+        // Validation checks
+        const titleMissing = !title.trim();
+        const dueDateInPast = dueDate < new Date();
+
+        if (titleMissing && dueDateInPast) {
+            setModalConfig({
+                visible: true,
+                type: 'warning',
+                title: 'Missing Information',
+                message: 'Please add a task title and select a future due date.',
+            });
+            return;
+        }
+
+        if (titleMissing) {
+            setModalConfig({
+                visible: true,
+                type: 'warning',
+                title: 'Title Required',
+                message: 'Please add a task title before saving.',
+            });
+            return;
+        }
+
+        if (dueDateInPast) {
+            setModalConfig({
+                visible: true,
+                type: 'warning',
+                title: 'Invalid Due Date',
+                message: 'Please select a due date in the future.',
+            });
             return;
         }
 
@@ -90,7 +134,12 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
             onClose();
         } catch (e) {
             console.error(e);
-            Alert.alert("Error", "Could not save task.");
+            setModalConfig({
+                visible: true,
+                type: 'error',
+                title: 'Save Failed',
+                message: 'Could not save task. Please try again.',
+            });
         }
     };
 
@@ -115,13 +164,13 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: bgColor }}>
-            <View className="flex-1 px-6 pt-4">
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'left', 'right']}>
+            <View className="flex-1 px-6">
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-8">
                     <StyledText className="text-2xl font-bold text-zinc-900 dark:text-white">New Task</StyledText>
-                    <TouchableOpacity onPress={onClose} className="p-2 bg-zinc-200 dark:bg-zinc-800 rounded-full">
-                        <X size={20} className="text-zinc-600 dark:text-zinc-400" />
+                    <TouchableOpacity onPress={onClose} className="p-3 bg-zinc-200 dark:bg-zinc-800 rounded-full active:opacity-70">
+                        <X size={24} className="text-zinc-600 dark:text-zinc-400" />
                     </TouchableOpacity>
                 </View>
 
@@ -246,6 +295,16 @@ export default function AddTaskScreen({ onClose, onTaskCreated }: AddTaskProps) 
                     <StyledText className="text-white font-bold text-lg">Save Task</StyledText>
                 </TouchableOpacity>
             </View>
-        </View>
+
+            {/* Custom Modal */}
+            <CustomModal
+                visible={modalConfig.visible}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                primaryButtonText="OK"
+                onPrimaryPress={() => setModalConfig({ ...modalConfig, visible: false })}
+            />
+        </SafeAreaView>
     );
 }

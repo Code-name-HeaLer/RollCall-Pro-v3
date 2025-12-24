@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Platform, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
@@ -23,7 +24,9 @@ const StyledText = styled(Text);
 
 export default function DashboardScreen() {
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-    const isoDate = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const isoDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
 
@@ -333,7 +336,7 @@ export default function DashboardScreen() {
 
                 {/* --- EXTRA CLASS MODAL --- */}
                 <Modal visible={isExtraModalOpen} animationType="slide" presentationStyle="pageSheet">
-                    <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#09090b' : '#f8fafc' }} className="p-6">
+                    <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#09090b' : '#f8fafc' }} edges={["top","left","right"]} className="p-6">
                         <View className="flex-row justify-between items-center mb-8">
                             <Text className="text-xl font-bold text-zinc-900 dark:text-white">Add Extra Class</Text>
                             <TouchableOpacity onPress={() => setIsExtraModalOpen(false)}>
@@ -412,7 +415,7 @@ export default function DashboardScreen() {
                         <TouchableOpacity onPress={saveExtraClass} className="bg-indigo-600 p-4 rounded-2xl items-center shadow-lg shadow-indigo-500/30">
                             <Text className="text-white font-bold text-lg">Add to Today's Schedule</Text>
                         </TouchableOpacity>
-                    </View>
+                    </SafeAreaView>
                 </Modal>
                 {/* 6. ADD THE MODAL */}
                 <Modal visible={isNotifOpen} transparent animationType="fade">
